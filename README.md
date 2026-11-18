@@ -1,6 +1,6 @@
 # Dubai Property Data Platform
 
-[![CI](https://github.com/salmantariq596/dubai-property-data-platform-/actions/workflows/ci.yml/badge.svg)](https://github.com/salmantariq596/dubai-property-data-platform-/actions/workflows/ci.yml)
+[![CI](https://github.com/salmantariq596/dubai-property-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/salmantariq596/dubai-property-data-platform/actions/workflows/ci.yml)
 
 An Azure lakehouse that turns official Dubai Land Department (DLD) sales and rental records into a market dashboard.
 
@@ -74,8 +74,8 @@ Design reasoning: [ADR 0002](docs/adr/0002-bronze-ingestion-design.md). Operatio
 ## Quick start
 
 ```bash
-git clone https://github.com/salmantariq596/dubai-property-data-platform-.git
-cd dubai-property-data-platform-
+git clone https://github.com/salmantariq596/dubai-property-data-platform.git
+cd dubai-property-data-platform
 make setup          # virtualenv, dev dependencies, pre-commit hooks
 make test-fast      # unit tests, no Spark needed
 make setup-spark    # optional: local PySpark + Delta (Java 17+)
