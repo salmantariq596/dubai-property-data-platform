@@ -8,6 +8,10 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    env:
+      # Fail (don't skip) if Delta Lake can't start, so the Delta-only tests
+      # for idempotent writes and append-only tables always run here.
+      REQUIRE_DELTA: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -16,13 +20,24 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - uses: actions/setup-java@v4  # Spark 4 needs Java 17+
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Delta Lake jars
+        uses: actions/cache@v4
+        with:
+          path: ~/.ivy2
+          key: ivy-${{ hashFiles('pyproject.toml') }}
+
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,spark]"
 
       - name: Lint
         run: |
           ruff check src tests
           ruff format --check src tests
 
-      - name: Unit tests
+      - name: Tests (unit + Spark/Delta)
         run: pytest --cov=dubai_property --cov-report=term-missing
