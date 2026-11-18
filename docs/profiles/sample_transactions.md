@@ -1,6 +1,6 @@
-# Profile: sample_transactions (synthetic)
+# Profile: Sample transactions (synthetic)
 
-Generated 2026-11-04 13:59 UTC by `dld-profile`.
+Generated 2026-11-08 09:02 UTC by `dld-profile`.
 
 ## Summary
 

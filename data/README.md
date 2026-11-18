@@ -1,8 +1,8 @@
 # data/
 
-Local working copies of the raw DLD downloads. **Nothing under `data/raw/` is committed** (see `.gitignore`): the files are large and can always be re-downloaded from the official source.
+Local working copies of the raw DLD downloads, used for profiling. **Nothing under `data/raw/` is committed** (see `.gitignore`): the files are large and can always be re-downloaded from the official source.
 
-Expected layout, matching the bronze landing convention used later in the pipeline:
+Use the same layout as the Databricks landing volume (`/Volumes/<catalog>/raw/landing/`), so files can be uploaded as they are:
 
 ```
 data/raw/

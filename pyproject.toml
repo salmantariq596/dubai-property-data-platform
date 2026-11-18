@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dubai-property"
-version = "0.1.0"
+version = "0.2.0"
 description = "Azure lakehouse for official Dubai Land Department sales and rental data."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,6 +22,12 @@ dev = [
     "pre-commit>=3.7",
     "jupyter>=1.0",
 ]
+# Local Spark for the bronze tests. Databricks provides its own Spark, so this
+# is never installed there. PySpark and Delta versions must match each other.
+spark = [
+    "pyspark==4.0.1",
+    "delta-spark==4.0.0",
+]
 
 [project.scripts]
 dld-profile = "dubai_property.profiling.cli:main"
@@ -33,6 +39,9 @@ where = ["src"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 pythonpath = ["src"]
+markers = [
+    "spark: needs a local SparkSession (skipped when PySpark or Java is missing)",
+]
 
 [tool.ruff]
 line-length = 100
@@ -41,6 +50,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]
+# `from pyspark.sql import functions as F` is the PySpark convention
+ignore = ["N812"]
 
 [tool.ruff.lint.per-file-ignores]
-"notebooks/*" = ["E402"]
+"notebooks/*" = ["E402", "F821", "E501"]  # Databricks notebooks: spark/dbutils/display are globals
