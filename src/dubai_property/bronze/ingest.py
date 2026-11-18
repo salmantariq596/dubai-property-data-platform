@@ -216,7 +216,14 @@ def make_batch_writer(settings: BronzeSettings, dataset: Dataset, load_id: str):
             )
             for row in stats
         ]
-        load_log.write_entries(spark, log_table, entries, txnAppId=app_id, txnVersion=batch_id)
+        load_log.write_entries(
+            spark,
+            log_table,
+            entries,
+            table_format=table_format,
+            txnAppId=app_id,
+            txnVersion=batch_id,
+        )
 
         bad = [e.source_file for e in entries if e.status == load_log.MISMATCH]
         if bad:
@@ -268,7 +275,9 @@ def _log_run(spark, settings, dataset, load_id, status, started, error=None) -> 
         finished_at=_now(),
         error_message=error,
     )
-    load_log.write_entries(spark, settings.load_log_table, [entry])
+    load_log.write_entries(
+        spark, settings.load_log_table, [entry], table_format=settings.table_format
+    )
 
 
 def run_ingestion(

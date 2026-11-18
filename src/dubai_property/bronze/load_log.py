@@ -77,13 +77,25 @@ def ensure_load_log_table(spark, table: str, table_format: str = "delta") -> Non
     spark.sql(f"CREATE TABLE IF NOT EXISTS {table} ({LOAD_LOG_DDL}) USING {table_format}")
 
 
-def write_entries(spark, table: str, entries: list[LoadLogEntry], **write_options) -> None:
-    """Append entries. ``write_options`` carries txnAppId/txnVersion for idempotency."""
+def write_entries(
+    spark,
+    table: str,
+    entries: list[LoadLogEntry],
+    *,
+    table_format: str = "delta",
+    **write_options,
+) -> None:
+    """Append entries. ``write_options`` carries txnAppId/txnVersion for idempotency.
+
+    ``table_format`` must match the format the table was created with: without
+    it Spark uses ``spark.sql.sources.default`` (Parquet outside Databricks) and
+    refuses to append to a Delta table.
+    """
     if not entries:
         return
     schema = spark.table(table).schema
     df = spark.createDataFrame([e.as_row() for e in entries], schema=schema)
-    writer = df.write.mode("append")
+    writer = df.write.format(table_format).mode("append")
     for key, value in write_options.items():
         writer = writer.option(key, value)
     writer.saveAsTable(table)
