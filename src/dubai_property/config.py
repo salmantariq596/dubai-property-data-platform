@@ -16,15 +16,22 @@ class Dataset:
     bronze_table: str  # table name inside the bronze schema
     business_key: str | None  # used by silver for dedup; recorded here for one source of truth
     description: str
+    silver_table: str | None = None  # table name inside the silver schema, if cleaned there
 
 
 DATASETS: dict[str, Dataset] = {
     d.name: d
     for d in (
         Dataset(
-            "transactions", "dld_transactions_raw", "transaction_id", "Sales, mortgages, gifts"
+            "transactions",
+            "dld_transactions_raw",
+            "transaction_id",
+            "Sales, mortgages, gifts",
+            silver_table="transactions",
         ),
-        Dataset("rents", "dld_rents_raw", "contract_id", "Ejari rental contracts"),
+        Dataset(
+            "rents", "dld_rents_raw", "contract_id", "Ejari rental contracts", silver_table="rents"
+        ),
         Dataset("units", "dld_units_raw", None, "Unit reference data"),
         Dataset("projects", "dld_projects_raw", "project_number", "Project reference data"),
     )
@@ -85,3 +92,44 @@ class BronzeSettings:
 
     def write_app_id(self, dataset: Dataset) -> str:
         return f"bronze_{dataset.name}_{self.checkpoint_generation}"
+
+
+@dataclass(frozen=True)
+class SilverSettings:
+    """Where silver reads bronze from and writes its tables.
+
+    Silver loads with Delta ``MERGE``, so ``table_format`` must be ``"delta"``
+    for a run; tests of the pure transformations need no tables at all.
+    """
+
+    catalog: str
+    bronze_schema: str = "bronze"
+    silver_schema: str = "silver"
+    table_format: str = "delta"
+
+    @classmethod
+    def for_databricks(cls, catalog: str = "dubai") -> SilverSettings:
+        return cls(catalog=catalog)
+
+    def bronze_table(self, dataset: Dataset) -> str:
+        return f"{self.catalog}.{self.bronze_schema}.{dataset.bronze_table}"
+
+    def table(self, name: str) -> str:
+        return f"{self.catalog}.{self.silver_schema}.{name}"
+
+    def silver_table(self, dataset: Dataset) -> str:
+        if dataset.silver_table is None:
+            raise ValueError(f"Dataset {dataset.name!r} has no silver table")
+        return self.table(dataset.silver_table)
+
+    @property
+    def quarantine_table(self) -> str:
+        return self.table("quarantine")
+
+    @property
+    def areas_table(self) -> str:
+        return self.table("areas")
+
+    @property
+    def processed_loads_table(self) -> str:
+        return self.table("processed_loads")

@@ -28,7 +28,7 @@ if shutil.which("java") is None and not os.environ.get("JAVA_HOME"):
 
 from pyspark.sql import SparkSession  # noqa: E402
 
-from dubai_property.config import BronzeSettings  # noqa: E402
+from dubai_property.config import BronzeSettings, SilverSettings  # noqa: E402
 
 _BASE_CONF = {
     "spark.sql.shuffle.partitions": "2",
@@ -102,4 +102,15 @@ def settings(tmp_path, table_format) -> BronzeSettings:
         bronze_schema=f"bronze_{uuid.uuid4().hex[:8]}",
         source="files",
         table_format=table_format,
+    )
+
+
+@pytest.fixture
+def silver_settings(settings) -> SilverSettings:
+    """Silver tables in their own throwaway schema, reading the test's bronze schema."""
+    return SilverSettings(
+        catalog=settings.catalog,
+        bronze_schema=settings.bronze_schema,
+        silver_schema=f"silver_{uuid.uuid4().hex[:8]}",
+        table_format=settings.table_format,
     )
