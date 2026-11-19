@@ -77,7 +77,7 @@ def resolve_areas(
     display_map = _literal_map(rules.alias_display(aliases))
 
     en_norm = normalize_en(F.col("area_name_en"))
-    key_from_en = F.coalesce(key_map.getItem(en_norm), en_norm) if key_map is not None else en_norm
+    key_from_en = F.coalesce(key_map[en_norm], en_norm) if key_map is not None else en_norm
 
     staged = df.withColumns(
         {
@@ -138,9 +138,7 @@ def resolve_areas(
         )
 
     alias_name = (
-        display_map.getItem(F.col("area_key"))
-        if display_map is not None
-        else F.lit(None).cast("string")
+        display_map[F.col("area_key")] if display_map is not None else F.lit(None).cast("string")
     )
     resolved = keyed.withColumns(
         {
