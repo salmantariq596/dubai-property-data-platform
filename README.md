@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 2 of 10 — bronze ingestion.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 3 of 10 — silver cleaning.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -55,12 +55,32 @@ flowchart LR
 
 Design reasoning: [ADR 0002](docs/adr/0002-bronze-ingestion-design.md). Operations: [bronze runbook](docs/runbook_bronze.md).
 
+## Silver: typed, trustworthy, one row per key
+
+```mermaid
+flowchart LR
+    B[("bronze.dld_*_raw<br/>new load ids only")] --> C["cast with explicit formats<br/>check rules"]
+    C -->|breaks a rule| Q[("silver.quarantine<br/>rules broken + raw row")]
+    C -->|passes| D["dedup on business key<br/>latest ingested wins"]
+    D --> E["derive sqft, price/sqft, USD,<br/>off-plan, annual rent<br/>flag outliers · map areas"]
+    E -->|MERGE on key| S[("silver.transactions<br/>silver.rents")]
+    S --> A[("silver.areas")]
+```
+
+- **Bad data is kept, not lost.** A row that fails a cast or a rule goes to `silver.quarantine` with the rules it broke and its raw values.
+- **Outliers are flagged, not deleted.** Zero sizes and prices per sqft outside 100–20,000 AED stay in silver with `outlier_reason`.
+- **One area, one name.** English, Arabic and misspelled area names map to one `area_key`; Arabic-only rows get their English name.
+- **Re-runs are safe.** Only new bronze loads are processed, and MERGE on the business key means a repeat changes nothing and old data never overwrites newer data.
+
+Design reasoning: [ADR 0003](docs/adr/0003-silver-cleaning-design.md). Operations: [silver runbook](docs/runbook_silver.md).
+
 ## Repository layout
 
 ```
 ├── src/dubai_property/   # all pipeline logic, unit-tested
 │   ├── profiling/        # Module 1: data discovery
 │   ├── bronze/           # Module 2: Auto Loader ingestion, load log
+│   ├── silver/           # Module 3: rules, cleaning, area mapping, MERGE
 │   ├── config.py         # datasets, paths, table names
 │   ├── silver/ gold/ quality/ utils/
 ├── notebooks/            # thin notebooks that call src/
@@ -85,7 +105,7 @@ make profile-sample # profile the synthetic fixture
 
 Spark tests run in CI on every pull request. On Windows they are skipped locally (local Spark needs extra setup there); use WSL to run them.
 
-**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/02_bronze_ingestion`.
+**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/02_bronze_ingestion` and `notebooks/03_silver_cleaning`.
 
 Profile a real DLD download:
 
@@ -106,7 +126,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 |---|---|---|
 | 1 | Repo skeleton, data profiling, data dictionary, business questions | ✅ v0.1 |
 | 2 | Bronze ingestion with Auto Loader and load log | ✅ v0.2 |
-| 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ⏳ |
+| 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ v0.3 |
 | 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ⏳ |
 | 5 | Data quality framework and integration tests | ⏳ |
 | 6 | Power BI dashboard (minimum complete version) | ⏳ |
@@ -121,6 +141,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 
 - [0001 — Develop locally and on Databricks Free Edition before Azure](docs/adr/0001-local-first-development.md)
 - [0002 — Bronze ingestion: Auto Loader, idempotent foreachBatch, load log](docs/adr/0002-bronze-ingestion-design.md)
+- [0003 — Silver cleaning: explicit casts, quarantine, MERGE on the business key](docs/adr/0003-silver-cleaning-design.md)
 
 ## License
 

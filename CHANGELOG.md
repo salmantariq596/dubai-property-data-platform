@@ -2,6 +2,18 @@
 
 Each module is merged with a pull request and tagged.
 
+## [v0.3.0] — Module 3: Silver cleaning — 2026-11-19
+
+### Added
+- `dubai_property.silver.rules`: every silver column, type and required flag, plus date and number patterns, unit constants, outlier thresholds and area aliases, as plain data with no Spark dependency.
+- `dubai_property.silver.transform`: explicit casts with `try_cast` (ISO and day-first dates only, thousands separators removed). Rule checks send bad rows to quarantine with the rules they broke. Rows are deduplicated on the business key (latest ingested wins). Derived columns: `size_sqft`, `price_per_sqft`, `value_usd`, `is_offplan`, `bedrooms` and annualised rent. Outliers are flagged, not dropped.
+- `dubai_property.silver.areas`: one `area_key` per area across English, Arabic and spelling variants. Arabic spellings are folded for matching, English names are filled from Arabic, and abbreviations are mapped via `AREA_ALIASES`. Builds `silver.areas`.
+- `dubai_property.silver.pipeline.run_silver`: processes bronze loads not yet in `silver.processed_loads`, MERGEs into `silver.transactions` / `silver.rents` on the business key (older data never overwrites newer) and into `silver.quarantine` on a row hash. Every step is safe to repeat.
+- `SilverSettings` and `Dataset.silver_table` in `config.py`.
+- `notebooks/03_silver_cleaning.py` with checks for duplicate keys, quarantine by rule, outliers and unmapped areas.
+- 65 new tests: 41 unit tests for the rules, 18 Spark tests for the transformations, and 6 Delta tests for MERGE, re-runs, replays and reprocessing.
+- ADR 0003, `docs/runbook_silver.md`, and silver tables in the data dictionary.
+
 ## [v0.2.0] — Module 2: Bronze ingestion — 2026-11-08
 
 ### Added

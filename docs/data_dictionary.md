@@ -69,3 +69,49 @@ Business key: `contract_id`. Grain in silver: one row per contract.
 | Area names differ between datasets | Transactions, rents | Map to one `area_key` via `silver.areas` | Module 3 |
 | Sizes in m², dashboard in ft² | All | Convert in silver, keep both | Module 3 |
 | Sales vs rent property types differ | Transactions, rents | Mapping table to `dim_property_type` | Module 4 |
+
+---
+
+## Silver tables (Module 3)
+
+Built by `notebooks/03_silver_cleaning` from the rules in `src/dubai_property/silver/rules.py`. Design: [ADR 0003](adr/0003-silver-cleaning-design.md).
+
+| Table | Grain | Key |
+|---|---|---|
+| `silver.transactions` | One row per transaction number (latest ingested version) | `transaction_id` |
+| `silver.rents` | One row per Ejari contract (latest ingested version) | `contract_id` |
+| `silver.areas` | One row per area | `area_key` |
+| `silver.quarantine` | One row per rejected source row | `dataset`, `record_hash` |
+| `silver.processed_loads` | One row per bronze load cleaned | `dataset`, `load_id` |
+
+### Columns added to transactions and rents
+
+Every source column above is kept with its silver type. Columns missing from a file are null.
+
+| Column | Table | Meaning |
+|---|---|---|
+| `area_key` | both | Normalised English area name, the join key to `silver.areas` |
+| `area_name_en`, `area_name_ar` | both | Standard names for the area (replace the names as delivered) |
+| `area_name_en_source`, `area_name_ar_source` | both | Names as delivered, whitespace cleaned |
+| `is_area_mapped` | both | False when no area could be found |
+| `size_sqft` | both | `procedure_area` / `actual_area` × 10.7639 |
+| `price_per_sqft` | transactions | `actual_worth / size_sqft`, null when either is zero or missing |
+| `value_usd` | transactions | `actual_worth / 3.6725` |
+| `is_offplan` | transactions | Off-plan registration type, or a pre-registration procedure |
+| `bedrooms` | transactions | From `rooms_en`: `"2 B/R"` → 2, `Studio` → 0 |
+| `is_outlier`, `outlier_reason` | transactions | `missing_size`, `non_positive_value`, `price_per_sqft_below_min` (< 100), `price_per_sqft_above_max` (> 20,000) |
+| `contract_days` | rents | End date − start date + 1 |
+| `annual_rent_aed`, `annual_rent_source` | rents | `annual_amount`, or `contract_amount` × 365 / `contract_days` |
+| `is_multi_unit` | rents | `no_of_prop` > 1 (distorts per-unit medians) |
+| `_load_id`, `_source_file`, `_ingested_at` | both | Lineage from bronze |
+| `_processed_at` | both | When silver last wrote the row |
+
+### Quarantine rules
+
+| Rule | Applies to |
+|---|---|
+| `missing_<column>` | Required columns: business keys, `instance_date`, `actual_worth`, contract dates |
+| `invalid_<column>` | Any typed column whose value cannot be cast |
+| `rescued_data` | Rows with values Auto Loader could not fit to the schema |
+| `end_before_start` | Rents |
+| `missing_rent_amount` | Rents with neither `annual_amount` nor `contract_amount` |
