@@ -1,0 +1,36 @@
+expression GoldSource = "Databricks" meta [IsParameterQuery=true, List={"Databricks", "Parquet"}, DefaultValue="Databricks", Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_ResultType = Text
+
+expression DatabricksHost = "adb-0000000000000000.0.azuredatabricks.net" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_ResultType = Text
+
+expression DatabricksHttpPath = "/sql/1.0/warehouses/0000000000000000" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_ResultType = Text
+
+expression GoldCatalog = "dubai" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_ResultType = Text
+
+expression GoldFolder = "C:\dubai-gold" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	annotation PBI_ResultType = Text
+
+expression GoldTable =
+		(table_name as text) as table =>
+		let
+		    FromDatabricks = () =>
+		        let
+		            Source = Databricks.Catalogs(DatabricksHost, DatabricksHttpPath, [Catalog = null, Database = null, EnableAutomaticProxyDiscovery = null]),
+		            CatalogData = Source{[Name = GoldCatalog, Kind = "Database"]}[Data],
+		            Gold = CatalogData{[Name = "gold", Kind = "Schema"]}[Data],
+		            Result = Gold{[Name = table_name, Kind = "Table"]}[Data]
+		        in
+		            Result,
+		    FromParquet = () =>
+		        let
+		            Files = Folder.Files(GoldFolder & "\" & table_name),
+		            ParquetFiles = Table.SelectRows(Files, each [Extension] = ".parquet"),
+		            Result = Table.Combine(List.Transform(ParquetFiles[Content], each Parquet.Document(_)))
+		        in
+		            Result
+		in
+		    if GoldSource = "Parquet" then FromParquet() else FromDatabricks()
+	annotation PBI_ResultType = Function

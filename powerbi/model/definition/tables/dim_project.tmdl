@@ -1,0 +1,52 @@
+table dim_project
+
+	column project_sk
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: project_sk
+
+	column project_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: project_key
+
+	column project_name_en
+		dataType: string
+		summarizeBy: none
+		sourceColumn: project_name_en
+
+	column project_number
+		dataType: string
+		summarizeBy: none
+		sourceColumn: project_number
+
+	column master_project_en
+		dataType: string
+		summarizeBy: none
+		sourceColumn: master_project_en
+
+	column developer_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: developer_name
+
+	column project_status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: project_status
+
+	column in_sales
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: in_sales
+
+	column in_rents
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: in_rents
+
+	partition dim_project = m
+		mode: import
+		source = GoldTable("dim_project")

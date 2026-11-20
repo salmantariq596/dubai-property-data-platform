@@ -1,0 +1,85 @@
+# Dashboard: Dubai property market
+
+Four pages, one message each. Every page answers questions from [business_questions.md](business_questions.md). Setup: [powerbi/README.md](../powerbi/README.md).
+
+## On every page
+
+- **Slicers** (top bar, synced across pages): `dim_date[year]` (between), `dim_area[current_area_name_en]` (dropdown, search on), `dim_property_type[property_type]` (dropdown).
+- **Arabic tooltip:** a tooltip page (*Page information → Allow use as tooltip*, 320 × 120) showing `dim_area[current_area_name_ar]` large, and the measures `Median Price per Sqft` and `Sales`. Set it as the tooltip on every visual that shows areas.
+- **Footer text:** "Source: Dubai Land Department open data. Registered transactions; outliers excluded from medians. Latest month is preliminary."
+- **Colours:** theme only. Teal (`#0F4C5C`) for the main series, orange (`#E36414`) for comparison (off-plan, last year).
+
+Use area names from `dim_area[current_area_name_en]` in visuals and slicers. Areas keep one name across renames there, while `area_name_en` shows the name at the time of each sale.
+
+## Page 1 — Market overview
+
+**Message:** how active and how expensive the market is, and where it is heading. *(Questions 1, 4, 6)*
+
+| Visual | Fields |
+|---|---|
+| 4 cards | `Sales`, `Sales Value AED`, `Median Price per Sqft`, `Median Price per Sqft YoY %` |
+| Line chart: price trend | X `dim_date[month_start]`, Y `Median Price per Sqft` and `Median Price per Sqft LY` |
+| Column chart: activity | X `dim_date[month_start]`, Y `Sales`, line `Off-plan Share` (combo chart) |
+| Bar chart: fastest risers | Y `dim_area[current_area_name_en]`, X `Median Price per Sqft YoY %`, top 10 by value, visual filter `Priced Sales ≥ 50` |
+
+## Page 2 — Area deep-dive
+
+**Message:** what a square foot costs, by area and property type. *(Questions 2, 7)*
+
+| Visual | Fields |
+|---|---|
+| Matrix | Rows `dim_area[current_area_name_en]`, columns `dim_property_type[property_type]`, values `Median Price per Sqft`; conditional formatting by background colour |
+| Scatter | Each dot an area: X `Sales`, Y `Median Price per Sqft`, size `Sales Value AED` |
+| Table: top projects | `dim_project[project_name_en]`, `dim_project[master_project_en]`, `Sales`, `Sales Value AED`, `Median Price per Sqft`; top 15 by `Sales` |
+
+## Page 3 — Off-plan vs ready
+
+**Message:** whether off-plan sells at a premium, and how much of the market it is. *(Questions 5, 6)*
+
+| Visual | Fields |
+|---|---|
+| 3 cards | `Off-plan Share`, `Off-plan Premium %`, `Off-plan Sales` |
+| Line chart | X `dim_date[month_start]`, Y `Median Price per Sqft Off-plan` and `Median Price per Sqft Ready` |
+| Bar chart | Y `dim_area[current_area_name_en]`, X `Off-plan Premium %`, visual filter `Off-plan Sales ≥ 20` |
+| 100% stacked column | X `dim_date[year]`, Y `Sales`, legend `fact_sales[is_offplan]` |
+
+## Page 4 — Rental yield
+
+**Message:** what gross yield an investor can expect, and where. *(Question 3)*
+
+| Visual | Fields |
+|---|---|
+| 3 cards | `Gross Yield %`, `Median Annual Rent AED`, `Median Sale Price AED` |
+| Bar chart: highest yields | Y `dim_area[current_area_name_en]`, X `Gross Yield %`, top 15 (areas below the 10-record minimum show blank and drop out) |
+| Scatter | Each dot an area: X `Median Sale Price AED`, Y `Median Annual Rent AED` |
+| Text box | "Gross yield = median annual rent / median sale price for the same area, type and period, shown only when each side has at least 10 records. Before service charges, vacancy and fees." |
+
+## Measures
+
+All in the model (`powerbi/model/definition/tables/fact_*.tmdl`), with the same rules as `gold.agg_area_monthly`.
+
+| Measure | Definition |
+|---|---|
+| `Sales`, `Sales Value AED`, `Sales Value USD` | Count and sum of registered sales (mortgages and gifts are not in `fact_sales`) |
+| `Median Price per Sqft`, `Median Sale Price AED` | Medians over sales not flagged as outliers |
+| `Median Price per Sqft LY`, `… YoY %` | Same period last year (`SAMEPERIODLASTYEAR`), and the change |
+| `Off-plan Sales`, `Off-plan Share` | Off-plan count, and its share of all sales |
+| `Median Price per Sqft Off-plan` / `Ready`, `Off-plan Premium %` | Medians per registration type, and the gap |
+| `Contracts`, `Median Annual Rent AED` | Contract count, and median rent over single-unit contracts |
+| `Gross Yield %` | Median rent / median sale price; blank unless `Priced Sales` and `Priced Contracts` are both at least 10 |
+
+## Checklist before export
+
+- [ ] Every number comes from a measure, never an implicit sum (the model discourages implicit measures)
+- [ ] Slicers synced across all four pages
+- [ ] Arabic tooltip set on every area visual
+- [ ] Footer note on every page
+- [ ] Latest month marked preliminary (or filtered out of trend charts)
+
+## Insights
+
+The plan's checkpoint: three real insights, with numbers, from the built dashboard. To be written once it runs on real DLD data.
+
+1. _
+2. _
+3. _
