@@ -63,6 +63,15 @@ def _static_rows(spark: SparkSession, rows: list[tuple], schema: StructType) -> 
     return spark.createDataFrame(rows, schema)
 
 
+def _prefer_sales(column: str) -> Column:
+    """Inside a group: the spelling sales use, where sales have one; else the most common.
+
+    Sales and rents can spell the same name differently ("Marina Gate", "MARINA GATE").
+    Preferring sales makes the choice deterministic instead of a tie between counts.
+    """
+    return F.coalesce(F.mode(F.when(F.col("__sales"), F.col(column))), F.mode(column))
+
+
 # --- dim_date ----------------------------------------------------------------------------
 
 
@@ -131,16 +140,12 @@ def build_dim_property_type(
         side(rents, "ejari_property_type_en", "ejari_property_sub_type_en", False)
     )
 
-    def preferred(column: str) -> Column:
-        """The sales spelling where sales has the type; otherwise the most common."""
-        return F.coalesce(F.mode(F.when(F.col("__sales"), F.col(column))), F.mode(column))
-
     found = (
         rows.where(F.col("property_type_key").isNotNull())
         .groupBy("property_type_key")
         .agg(
-            preferred("__type").alias("property_type"),
-            preferred("__sub").alias("property_sub_type"),
+            _prefer_sales("__type").alias("property_type"),
+            _prefer_sales("__sub").alias("property_sub_type"),
             F.max("__sales").alias("in_sales"),
             F.max(~F.col("__sales")).alias("in_rents"),
         )
@@ -206,9 +211,9 @@ def build_dim_project(transactions: DataFrame, rents: DataFrame) -> DataFrame:
         .where(F.col("project_key").isNotNull())
         .groupBy("project_key")
         .agg(
-            F.mode("__name").alias("project_name_en"),
-            F.mode("__number").alias("project_number"),
-            F.mode("__master").alias("master_project_en"),
+            _prefer_sales("__name").alias("project_name_en"),
+            _prefer_sales("__number").alias("project_number"),
+            _prefer_sales("__master").alias("master_project_en"),
             F.max("__sales").alias("in_sales"),
             F.max(~F.col("__sales")).alias("in_rents"),
         )
