@@ -133,3 +133,42 @@ class SilverSettings:
     @property
     def processed_loads_table(self) -> str:
         return self.table("processed_loads")
+
+
+GOLD_TABLES = (
+    "dim_date",
+    "dim_area",
+    "dim_property_type",
+    "dim_project",
+    "fact_sales",
+    "fact_rents",
+    "agg_area_monthly",
+)
+
+
+@dataclass(frozen=True)
+class GoldSettings:
+    """Where gold reads silver from and writes the star schema.
+
+    ``cluster_facts`` liquid-clusters the fact tables by date. It is on for
+    Databricks and off for local tests, where open-source Delta may not
+    support it.
+    """
+
+    catalog: str
+    silver_schema: str = "silver"
+    gold_schema: str = "gold"
+    table_format: str = "delta"
+    cluster_facts: bool = False
+
+    @classmethod
+    def for_databricks(cls, catalog: str = "dubai") -> GoldSettings:
+        return cls(catalog=catalog, cluster_facts=True)
+
+    def silver_table(self, name: str) -> str:
+        return f"{self.catalog}.{self.silver_schema}.{name}"
+
+    def table(self, name: str) -> str:
+        if name not in GOLD_TABLES:
+            raise KeyError(f"Unknown gold table {name!r}. Known: {list(GOLD_TABLES)}")
+        return f"{self.catalog}.{self.gold_schema}.{name}"

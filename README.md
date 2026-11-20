@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 3 of 10 — silver cleaning.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 4 of 10 — gold star schema.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -74,6 +74,25 @@ flowchart LR
 
 Design reasoning: [ADR 0003](docs/adr/0003-silver-cleaning-design.md). Operations: [silver runbook](docs/runbook_silver.md).
 
+## Gold: a star schema for Power BI
+
+```mermaid
+flowchart LR
+    S[("silver.transactions<br/>silver.rents<br/>silver.areas")] --> D["dim_date · dim_area (SCD 2)<br/>dim_property_type · dim_project"]
+    S --> F["fact_sales · fact_rents<br/>surrogate keys from the dims"]
+    D --> F
+    F --> A[("agg_area_monthly<br/>median price/sqft, YoY,<br/>median rent, gross yield")]
+    A --> P[Power BI]
+    F --> P
+```
+
+- **Clear grain.** `fact_sales` is one registered sale, `fact_rents` one Ejari contract; `agg_area_monthly` is one area × property type × month.
+- **History kept.** `dim_area` is SCD Type 2: a sale keeps the area name it had on its date, and the aggregate reports today's name.
+- **No lost rows.** Missing areas, types or projects point at an Unknown row (`-1`).
+- **Yield you can trust.** Gross yield is published only when both medians rest on at least 10 records; outliers and multi-unit contracts are left out of medians.
+
+Model diagram, grains and measures: [gold model](docs/gold_model.md). Design reasoning: [ADR 0004](docs/adr/0004-gold-star-schema.md). Timings: [performance](docs/performance.md).
+
 ## Repository layout
 
 ```
@@ -81,8 +100,9 @@ Design reasoning: [ADR 0003](docs/adr/0003-silver-cleaning-design.md). Operation
 │   ├── profiling/        # Module 1: data discovery
 │   ├── bronze/           # Module 2: Auto Loader ingestion, load log
 │   ├── silver/           # Module 3: rules, cleaning, area mapping, MERGE
+│   ├── gold/             # Module 4: star schema, SCD Type 2, monthly aggregate
 │   ├── config.py         # datasets, paths, table names
-│   ├── silver/ gold/ quality/ utils/
+│   ├── quality/ utils/
 ├── notebooks/            # thin notebooks that call src/
 ├── tests/                # unit/, spark/, integration/, fixtures/
 ├── infra/                # Terraform
@@ -105,7 +125,7 @@ make profile-sample # profile the synthetic fixture
 
 Spark tests run in CI on every pull request. On Windows they are skipped locally (local Spark needs extra setup there); use WSL to run them.
 
-**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/02_bronze_ingestion` and `notebooks/03_silver_cleaning`.
+**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/02_bronze_ingestion`, `notebooks/03_silver_cleaning` and `notebooks/04_gold_star_schema`.
 
 Profile a real DLD download:
 
@@ -127,7 +147,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 1 | Repo skeleton, data profiling, data dictionary, business questions | ✅ v0.1 |
 | 2 | Bronze ingestion with Auto Loader and load log | ✅ v0.2 |
 | 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ v0.3 |
-| 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ⏳ |
+| 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ v0.4 |
 | 5 | Data quality framework and integration tests | ⏳ |
 | 6 | Power BI dashboard (minimum complete version) | ⏳ |
 | 7 | Azure infrastructure with Terraform | ⏳ |
@@ -142,6 +162,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 - [0001 — Develop locally and on Databricks Free Edition before Azure](docs/adr/0001-local-first-development.md)
 - [0002 — Bronze ingestion: Auto Loader, idempotent foreachBatch, load log](docs/adr/0002-bronze-ingestion-design.md)
 - [0003 — Silver cleaning: explicit casts, quarantine, MERGE on the business key](docs/adr/0003-silver-cleaning-design.md)
+- [0004 — Gold star schema: hash surrogate keys, SCD Type 2 areas, full rebuilds](docs/adr/0004-gold-star-schema.md)
 
 ## License
 

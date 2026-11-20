@@ -16,7 +16,7 @@ The dashboard exists to answer these questions for brokers, investors, banks and
 ## Definitions
 
 - **Price per sqft:** `actual_worth / (procedure_area × 10.7639)`, sales only, outliers flagged and excluded from medians.
-- **Gross rental yield:** median annual rent / median sale price for the same area, property type and month. Reported only when both sides have at least a minimum number of records (threshold decided in Module 4).
+- **Gross rental yield:** median annual rent / median sale price for the same area, property type and month. Reported only when both medians rest on at least 10 records (`MIN_RECORDS_FOR_YIELD` in `gold/rules.py`); multi-unit contracts are excluded from the rent median.
 - **Off-plan:** registration type is Off-Plan, or the procedure is a pre-registration.
 
 ## Out of scope (for now)
