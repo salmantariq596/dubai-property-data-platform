@@ -2,6 +2,25 @@
 
 Each module is merged with a pull request and tagged.
 
+## [v0.5.0] — Module 5: Data quality and integration tests — 2026-11-20
+
+### Added
+- `dubai_property.quality.checks`: 25 checks between the layers, each one SQL query (rows checked, rows failed) with WARN and FAIL thresholds on the failed share:
+  - **bronze:** row-count change within 30% of the previous load; last load succeeded;
+  - **silver:** keys not null and unique, dates inside the calendar and not in the future, positive sizes, values and rents, areas mapped, quarantine rate;
+  - **gold:** facts reconcile with silver, keys unique and resolving to dimensions, one current version per area, known areas, plausible yields.
+- `dubai_property.quality.runner`: `run_quality` evaluates a stage and records every result in `quality.dq_results`, then raises `DataQualityError` on FAIL. Checks on tables not built yet are SKIPPED.
+- `dubai_property.orchestrate.run_pipeline`: bronze → checks → silver → checks → gold → checks. A FAIL stops the run before the next layer, so gold keeps the last good data.
+- `QualitySettings` and `PipelineSettings` in `config.py`; `quality` schema in `00_setup_unity_catalog`.
+- Notebooks `05_data_quality.py` (run checks, review warnings and trends) and `06_run_pipeline.py` (the single entry point for a scheduler).
+- `tests/fixtures/sample_rents.csv`: synthetic Ejari contracts with planted problems.
+- Integration tests (`tests/integration/`) running bronze to gold on both fixtures: exact row counts per layer and statuses per stage, a mostly broken load stopped at silver with gold untouched, and a re-run that changes nothing.
+- 61 new tests: 49 unit tests for the check catalogue and thresholds, 9 Spark tests that break each kind of check on purpose, and 3 integration tests.
+- ADR 0005 and `docs/data_quality.md` (rule catalogue generated from code, `dq_results`, what to do when a check fails).
+
+### Changed
+- Spark fixtures moved to `tests/conftest.py` and shared by `tests/spark` and `tests/integration`; each Spark folder skips itself via `tests/spark_guard.py` when local Spark is unavailable.
+
 ## [v0.4.0] — Module 4: Gold star schema — 2026-11-20
 
 ### Added
