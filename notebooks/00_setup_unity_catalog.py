@@ -2,13 +2,14 @@
 # MAGIC %md
 # MAGIC # 00 · Unity Catalog setup
 # MAGIC
-# MAGIC Creates everything bronze needs. Safe to run any number of times.
+# MAGIC Creates the catalog, schemas and volumes the pipeline needs. Safe to run any number of times.
 # MAGIC
 # MAGIC | Object | Purpose |
 # MAGIC |---|---|
 # MAGIC | `<catalog>.raw.landing` volume | Raw DLD files, as delivered: `<dataset>/load_date=YYYY-MM-DD/*.csv` |
 # MAGIC | `<catalog>.bronze.checkpoints` volume | Auto Loader checkpoints and inferred schemas |
 # MAGIC | `bronze`, `silver`, `gold` schemas | One schema per medallion layer |
+# MAGIC | `quality` schema | `dq_results`: every data quality check, every run |
 # MAGIC
 # MAGIC **Databricks Free Edition:** if creating a catalog is not permitted, set the
 # MAGIC `catalog` widget to `workspace` (the catalog every Free Edition workspace has)
@@ -42,6 +43,7 @@ for schema, comment in {
     "bronze": "Raw data as delivered: all strings, append-only",
     "silver": "Cleaned, typed, deduplicated",
     "gold": "Star schema and aggregates for Power BI",
+    "quality": "Data quality results",
 }.items():
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{schema} COMMENT '{comment}'")
 

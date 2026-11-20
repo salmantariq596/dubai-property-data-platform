@@ -172,3 +172,58 @@ class GoldSettings:
         if name not in GOLD_TABLES:
             raise KeyError(f"Unknown gold table {name!r}. Known: {list(GOLD_TABLES)}")
         return f"{self.catalog}.{self.gold_schema}.{name}"
+
+
+@dataclass(frozen=True)
+class QualitySettings:
+    """Where data quality checks read every layer and write ``dq_results``."""
+
+    catalog: str
+    bronze_schema: str = "bronze"
+    silver_schema: str = "silver"
+    gold_schema: str = "gold"
+    quality_schema: str = "quality"
+    table_format: str = "delta"
+
+    @classmethod
+    def for_databricks(cls, catalog: str = "dubai") -> QualitySettings:
+        return cls(catalog=catalog)
+
+    @property
+    def dq_results_table(self) -> str:
+        return f"{self.catalog}.{self.quality_schema}.dq_results"
+
+    def tables(self) -> dict[str, str]:
+        """Placeholder -> table name, for the SQL of the checks: ``{silver_transactions}``."""
+        layers = {
+            "bronze": (self.bronze_schema, ["load_log"]),
+            "silver": (
+                self.silver_schema,
+                ["transactions", "rents", "areas", "quarantine", "processed_loads"],
+            ),
+            "gold": (self.gold_schema, list(GOLD_TABLES)),
+        }
+        return {
+            f"{layer}_{name}": f"{self.catalog}.{schema}.{name}"
+            for layer, (schema, names) in layers.items()
+            for name in names
+        }
+
+
+@dataclass(frozen=True)
+class PipelineSettings:
+    """Settings for every layer, kept consistent: one catalog, one table format."""
+
+    bronze: BronzeSettings
+    silver: SilverSettings
+    gold: GoldSettings
+    quality: QualitySettings
+
+    @classmethod
+    def for_databricks(cls, catalog: str = "dubai") -> PipelineSettings:
+        return cls(
+            bronze=BronzeSettings.for_databricks(catalog),
+            silver=SilverSettings.for_databricks(catalog),
+            gold=GoldSettings.for_databricks(catalog),
+            quality=QualitySettings.for_databricks(catalog),
+        )
