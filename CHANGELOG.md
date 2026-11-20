@@ -2,6 +2,28 @@
 
 Each module is merged with a pull request and tagged.
 
+## [v0.4.0] — Module 4: Gold star schema — 2026-11-20
+
+### Added
+- `dubai_property.gold.dimensions`:
+  - `dim_date` (2000–2030, with the UAE weekend change of 2022);
+  - `dim_property_type`, shared by sales and rents through a type mapping;
+  - `dim_project`;
+  - `dim_area` as SCD Type 2: renames close the old version and open a new one, same-day changes update in place, and re-runs change nothing.
+- `dubai_property.gold.facts`:
+  - `fact_sales` (sales only) and `fact_rents`, with point-in-time area lookups and `-1` Unknown rows so no fact is lost in a join;
+  - `agg_area_monthly`: median price per sqft (outliers excluded), median sale price, median annual rent (multi-unit excluded), counts, YoY change, and gross yield with a minimum-sample rule. Includes an "All types" roll-up.
+- Surrogate keys are `xxhash64` of natural keys: stable across rebuilds.
+- `dubai_property.gold.pipeline`: `run_gold` rebuilds gold from silver (facts liquid-clustered by date on Databricks), `optimize_facts`, and `time_query` for benchmarks.
+- `GoldSettings` in `config.py`.
+- `notebooks/04_gold_star_schema.py` with model checks and a before/after `OPTIMIZE` benchmark.
+- 52 new tests: 30 unit tests for gold rules, 17 Spark tests for dimensions, SCD Type 2, facts and the aggregate, and 5 Delta tests running bronze → silver → gold end to end.
+- ADR 0004, `docs/gold_model.md` (model diagram, grains, measures) and `docs/performance.md` (to be filled from a Databricks run).
+
+### Changed
+- Spark test row builders moved to `tests/spark/builders.py`, shared by the silver and gold tests.
+- Business questions: gross yield needs at least 10 records on each side.
+
 ## [v0.3.0] — Module 3: Silver cleaning — 2026-11-19
 
 ### Added

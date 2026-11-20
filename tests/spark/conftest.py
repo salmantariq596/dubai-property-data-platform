@@ -28,12 +28,17 @@ if shutil.which("java") is None and not os.environ.get("JAVA_HOME"):
 
 from pyspark.sql import SparkSession  # noqa: E402
 
-from dubai_property.config import BronzeSettings, SilverSettings  # noqa: E402
+from dubai_property.config import BronzeSettings, GoldSettings, SilverSettings  # noqa: E402
 
 _BASE_CONF = {
     "spark.sql.shuffle.partitions": "2",
     "spark.ui.enabled": "false",
     "spark.sql.session.timeZone": "UTC",
+    # One session runs every test; gold tests build deep plans. Room to spare, and
+    # plan strings capped so logging a plan never fills the heap.
+    "spark.driver.memory": "3g",
+    "spark.sql.maxPlanStringLength": "100000",
+    "spark.sql.ui.retainedExecutions": "20",
 }
 
 
@@ -113,4 +118,15 @@ def silver_settings(settings) -> SilverSettings:
         bronze_schema=settings.bronze_schema,
         silver_schema=f"silver_{uuid.uuid4().hex[:8]}",
         table_format=settings.table_format,
+    )
+
+
+@pytest.fixture
+def gold_settings(silver_settings) -> GoldSettings:
+    """Gold tables in their own throwaway schema, reading the test's silver schema."""
+    return GoldSettings(
+        catalog=silver_settings.catalog,
+        silver_schema=silver_settings.silver_schema,
+        gold_schema=f"gold_{uuid.uuid4().hex[:8]}",
+        table_format=silver_settings.table_format,
     )
