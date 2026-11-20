@@ -32,7 +32,11 @@ def versions(dim, key):
 def model(spark, sales_rows, rent_rows, dim_area=None):
     """Silver frames plus every dimension built from them."""
     transactions = silver_frame(spark, sales_rows, "transactions")
-    rents = silver_frame(spark, rent_rows, "rents") if rent_rows else empty_silver(spark, "rents")
+    rents = (
+        silver_frame(spark, rent_rows, "rents")
+        if rent_rows
+        else empty_silver(spark, "rents").localCheckpoint()
+    )
     if dim_area is None:
         snapshot = transactions.select("area_key", "area_name_en", "area_name_ar").unionByName(
             rents.select("area_key", "area_name_en", "area_name_ar")
@@ -41,9 +45,12 @@ def model(spark, sales_rows, rent_rows, dim_area=None):
     return {
         "transactions": transactions,
         "rents": rents,
-        "dim_area": dim_area,
-        "dim_property_type": dimensions.build_dim_property_type(transactions, rents),
-        "dim_project": dimensions.build_dim_project(transactions, rents),
+        # Dimensions are tables in production: checkpoint them the same way here
+        "dim_area": dim_area.localCheckpoint(),
+        "dim_property_type": dimensions.build_dim_property_type(
+            transactions, rents
+        ).localCheckpoint(),
+        "dim_project": dimensions.build_dim_project(transactions, rents).localCheckpoint(),
     }
 
 
@@ -314,8 +321,8 @@ def _market(spark):
     ]
     m = model(spark, sales, rents)
     return (
-        facts.build_fact_sales(m["transactions"], *dims(m)),
-        facts.build_fact_rents(m["rents"], *dims(m)),
+        facts.build_fact_sales(m["transactions"], *dims(m)).localCheckpoint(),
+        facts.build_fact_rents(m["rents"], *dims(m)).localCheckpoint(),
         m,
     )
 

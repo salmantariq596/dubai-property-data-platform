@@ -80,5 +80,9 @@ def by_key(df, key="transaction_id"):
 
 
 def silver_frame(spark, rows: list[dict], dataset: str):
-    """Silver rows for ``dataset``, cleaned exactly as the pipeline would."""
-    return transform(bronze_frame(spark, rows), dataset).valid
+    """Silver rows for ``dataset``, cleaned exactly as the pipeline would.
+
+    Checkpointed, as a silver table would be, so tests that build gold on top
+    do not drag the whole silver plan along (deep plans exhaust the driver).
+    """
+    return transform(bronze_frame(spark, rows), dataset).valid.localCheckpoint()
