@@ -2,6 +2,24 @@
 
 Each module is merged with a pull request and tagged.
 
+## [Unreleased] — Module 6: Power BI dashboard (model ready, pages to build)
+
+### Added
+- Power BI semantic model as TMDL (`powerbi/model/definition/`):
+  - 7 gold tables and 11 relationships;
+  - 17 DAX measures: medians with gold's outlier rules, YoY change, off-plan share and premium, and gross yield with the 10-record minimum;
+  - current English and Arabic area names for slicers and tooltips.
+- One M source function, `GoldTable`, switching between a Databricks SQL warehouse and Parquet files with a single parameter.
+- `dubai_property.gold.export.export_gold` and `notebooks/07_export_gold.py`: gold to Parquet when no SQL warehouse is available.
+- Report theme (`powerbi/theme/dubai-market.json`) and a page-by-page design for the four pages, slicers and Arabic tooltip (`docs/dashboard.md`).
+- Tests:
+  - 52 unit tests that the model is consistent: DAX references resolve, relationships join existing columns, keys are hidden, TMDL indentation is valid;
+  - 8 Spark tests that every model column matches the name and type gold produces, and that the Parquet export round-trips.
+- ADR 0006 and `powerbi/README.md` (create the project, connect, build, export).
+
+### To do before v0.6.0
+- Build the four pages in Power BI Desktop, export the PDF and screenshots, and write three insights from real data.
+
 ## [v0.5.0] — Module 5: Data quality and integration tests — 2026-11-20
 
 ### Added

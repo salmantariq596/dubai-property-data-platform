@@ -48,3 +48,8 @@ derby.log
 Thumbs.db
 .idea/
 .vscode/
+
+# Power BI projects: per-user settings and the local data cache
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+*.pbix.bak

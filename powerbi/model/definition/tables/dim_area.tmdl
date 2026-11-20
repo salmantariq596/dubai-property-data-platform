@@ -1,0 +1,58 @@
+table dim_area
+
+	column area_sk
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: area_sk
+
+	column area_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: area_key
+
+	column area_name_en
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_name_en
+
+	column area_name_ar
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_name_ar
+
+	column attr_hash
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: attr_hash
+
+	column valid_from
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		summarizeBy: none
+		sourceColumn: valid_from
+
+	column valid_to
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		summarizeBy: none
+		sourceColumn: valid_to
+
+	column is_current
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_current
+
+	column current_area_name_en = CALCULATE ( MAX ( dim_area[area_name_en] ), ALLEXCEPT ( dim_area, dim_area[area_key] ), dim_area[is_current] = TRUE () )
+		dataType: string
+		summarizeBy: none
+
+	column current_area_name_ar = CALCULATE ( MAX ( dim_area[area_name_ar] ), ALLEXCEPT ( dim_area, dim_area[area_key] ), dim_area[is_current] = TRUE () )
+		dataType: string
+		summarizeBy: none
+
+	partition dim_area = m
+		mode: import
+		source = GoldTable("dim_area")

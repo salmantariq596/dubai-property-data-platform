@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 5 of 10 — data quality.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 6 of 10 — Power BI dashboard (model ready; pages being built).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -109,6 +109,12 @@ flowchart LR
 
 Rule catalogue and what to do when a check fails: [data quality](docs/data_quality.md). Design reasoning: [ADR 0005](docs/adr/0005-data-quality.md).
 
+## Dashboard
+
+Four pages in Power BI: Market overview, Area deep-dive, Off-plan vs ready, Rental yield. The semantic model is code (TMDL), tested against gold in CI so a gold change cannot silently break the report. One parameter switches between a Databricks SQL warehouse and exported Parquet files.
+
+Page designs: [dashboard](docs/dashboard.md). Setup: [powerbi/](powerbi/README.md). Design reasoning: [ADR 0006](docs/adr/0006-power-bi-model.md). *Screenshots follow once the pages are built on real data.*
+
 ## Repository layout
 
 ```
@@ -125,7 +131,7 @@ Rule catalogue and what to do when a check fails: [data quality](docs/data_quali
 ├── tests/                # unit/, spark/, integration/, fixtures/
 ├── infra/                # Terraform
 ├── adf/                  # exported Data Factory pipelines
-├── powerbi/              # .pbix and PDF export
+├── powerbi/              # semantic model (TMDL), theme, report and PDF export
 └── docs/                 # data sources, dictionary, decisions, profiles
 ```
 
@@ -167,7 +173,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ v0.3 |
 | 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ v0.4 |
 | 5 | Data quality framework and integration tests | ✅ v0.5 |
-| 6 | Power BI dashboard (minimum complete version) | ⏳ |
+| 6 | Power BI dashboard (minimum complete version) | 🔧 model ready, pages to build |
 | 7 | Azure infrastructure with Terraform | ⏳ |
 | 8 | Data Factory orchestration, Asset Bundles | ⏳ |
 | 9 | CI/CD deploy, monitoring, runbook, cost | ⏳ |
@@ -182,6 +188,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 - [0003 — Silver cleaning: explicit casts, quarantine, MERGE on the business key](docs/adr/0003-silver-cleaning-design.md)
 - [0004 — Gold star schema: hash surrogate keys, SCD Type 2 areas, full rebuilds](docs/adr/0004-gold-star-schema.md)
 - [0005 — Data quality: checks between layers, dq_results, fail before the next layer](docs/adr/0005-data-quality.md)
+- [0006 — Power BI model as code: import mode over gold, measures in DAX](docs/adr/0006-power-bi-model.md)
 
 ## License
 
