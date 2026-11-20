@@ -34,6 +34,11 @@ _BASE_CONF = {
     "spark.sql.shuffle.partitions": "2",
     "spark.ui.enabled": "false",
     "spark.sql.session.timeZone": "UTC",
+    # One session runs every test; gold tests build deep plans. Room to spare, and
+    # plan strings capped so logging a plan never fills the heap.
+    "spark.driver.memory": "3g",
+    "spark.sql.maxPlanStringLength": "100000",
+    "spark.sql.ui.retainedExecutions": "20",
 }
 
 
