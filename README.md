@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 4 of 10 — gold star schema.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 5 of 10 — data quality.** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -93,6 +93,22 @@ flowchart LR
 
 Model diagram, grains and measures: [gold model](docs/gold_model.md). Design reasoning: [ADR 0004](docs/adr/0004-gold-star-schema.md). Timings: [performance](docs/performance.md).
 
+## Data quality: bad data stops before the dashboard
+
+```mermaid
+flowchart LR
+    B[bronze] --> QB{{bronze checks}} --> S[silver] --> QS{{silver checks}} --> G[gold] --> QG{{gold checks}}
+    QS -->|FAIL| X["run stops:<br/>gold keeps the last good data"]
+    QB & QS & QG --> R[("quality.dq_results")]
+```
+
+- **The right response for each problem.** A bad row is quarantined in silver. Something odd but usable is a WARN. Anything that would make the next layer wrong is a FAIL and stops the run.
+- **25 checks, each one SQL query** with WARN and FAIL thresholds: keys, dates, positive values, quarantine rate, row-count change against the previous load, gold reconciliation with silver, dimension integrity.
+- **Every result recorded** in `dq_results`, before anything fails: rule, table, rows checked and failed, load id.
+- **Tested end to end.** Integration tests run bronze to gold on both fixtures, and prove that a mostly broken load is stopped at silver with gold untouched.
+
+Rule catalogue and what to do when a check fails: [data quality](docs/data_quality.md). Design reasoning: [ADR 0005](docs/adr/0005-data-quality.md).
+
 ## Repository layout
 
 ```
@@ -101,8 +117,10 @@ Model diagram, grains and measures: [gold model](docs/gold_model.md). Design rea
 │   ├── bronze/           # Module 2: Auto Loader ingestion, load log
 │   ├── silver/           # Module 3: rules, cleaning, area mapping, MERGE
 │   ├── gold/             # Module 4: star schema, SCD Type 2, monthly aggregate
+│   ├── quality/          # Module 5: checks between layers, dq_results
+│   ├── orchestrate.py    # the whole pipeline in one call
 │   ├── config.py         # datasets, paths, table names
-│   ├── quality/ utils/
+│   ├── utils/
 ├── notebooks/            # thin notebooks that call src/
 ├── tests/                # unit/, spark/, integration/, fixtures/
 ├── infra/                # Terraform
@@ -125,7 +143,7 @@ make profile-sample # profile the synthetic fixture
 
 Spark tests run in CI on every pull request. On Windows they are skipped locally (local Spark needs extra setup there); use WSL to run them.
 
-**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/02_bronze_ingestion`, `notebooks/03_silver_cleaning` and `notebooks/04_gold_star_schema`.
+**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/06_run_pipeline` (bronze, silver and gold with data quality checks between them). The layer notebooks `02`–`05` run one step each.
 
 Profile a real DLD download:
 
@@ -148,7 +166,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 2 | Bronze ingestion with Auto Loader and load log | ✅ v0.2 |
 | 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ v0.3 |
 | 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ v0.4 |
-| 5 | Data quality framework and integration tests | ⏳ |
+| 5 | Data quality framework and integration tests | ✅ v0.5 |
 | 6 | Power BI dashboard (minimum complete version) | ⏳ |
 | 7 | Azure infrastructure with Terraform | ⏳ |
 | 8 | Data Factory orchestration, Asset Bundles | ⏳ |
@@ -163,6 +181,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 - [0002 — Bronze ingestion: Auto Loader, idempotent foreachBatch, load log](docs/adr/0002-bronze-ingestion-design.md)
 - [0003 — Silver cleaning: explicit casts, quarantine, MERGE on the business key](docs/adr/0003-silver-cleaning-design.md)
 - [0004 — Gold star schema: hash surrogate keys, SCD Type 2 areas, full rebuilds](docs/adr/0004-gold-star-schema.md)
+- [0005 — Data quality: checks between layers, dq_results, fail before the next layer](docs/adr/0005-data-quality.md)
 
 ## License
 
