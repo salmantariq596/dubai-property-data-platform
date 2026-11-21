@@ -17,8 +17,22 @@ Each module is merged with a pull request and tagged.
   - 8 Spark tests that every model column matches the name and type gold produces, and that the Parquet export round-trips.
 - ADR 0006 and `powerbi/README.md` (create the project, connect, build, export).
 
+### Added (report)
+- The Power BI project `powerbi/DubaiPropertyMarket.pbip`:
+  - four pages built to `docs/dashboard.md`: Market overview, Area deep-dive, Off-plan vs ready, Rental yield;
+  - Year, Area and Property type slicers synced across pages;
+  - the Arabic area name in the tooltip of every area visual.
+- Measures `Price Growth % (50+ sales)`, `Off-plan Premium % (20+ off-plan)` and `Area (Arabic)`, and the column `fact_sales[Registration]`.
+- `tools/make_sample_gold.py`: synthetic gold tables (git-ignored) to build the report before real data exists.
+
+### Changed
+- The project's own model is the single source of truth: `powerbi/model/` removed, and the tests read `DubaiPropertyMarket.SemanticModel`.
+- The Databricks connector is looked up at run time, so the Parquet route works on Power BI versions that have not loaded the connector.
+- `Median Price per Sqft YoY %` rewritten without variables.
+- Lint covers `tools/`.
+
 ### To do before v0.6.0
-- Build the four pages in Power BI Desktop, export the PDF and screenshots, and write three insights from real data.
+- Load real data, export the PDF and screenshots, and write three insights.
 
 ## [v0.5.0] — Module 5: Data quality and integration tests — 2026-11-20
 

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "929a1880085cf0211613",
+  "position": {
+    "x": 960,
+    "y": 290,
+    "z": 7000,
+    "height": 560,
+    "width": 920,
+    "tabOrder": 7000
+  },
+  "visual": {
+    "visualType": "scatterChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_area"
+                    }
+                  },
+                  "Property": "current_area_name_en"
+                }
+              },
+              "queryRef": "dim_area.current_area_name_en",
+              "nativeQueryRef": "Area",
+              "active": true,
+              "displayName": "Area"
+            }
+          ]
+        },
+        "Tooltips": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_area"
+                    }
+                  },
+                  "Property": "Area (Arabic)"
+                }
+              },
+              "queryRef": "dim_area.Area (Arabic)",
+              "nativeQueryRef": "Area (Arabic)"
+            }
+          ]
+        },
+        "X": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_sales"
+                    }
+                  },
+                  "Property": "Median Sale Price AED"
+                }
+              },
+              "queryRef": "fact_sales.Median Sale Price AED",
+              "nativeQueryRef": "Median Sale Price AED",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_rents"
+                    }
+                  },
+                  "Property": "Median Annual Rent AED"
+                }
+              },
+              "queryRef": "fact_rents.Median Annual Rent AED",
+              "nativeQueryRef": "Median Annual Rent AED"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Median rent vs median sale price: each dot is an area'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

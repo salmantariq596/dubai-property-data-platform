@@ -53,3 +53,6 @@ Thumbs.db
 **/.pbi/localSettings.json
 **/.pbi/cache.abf
 *.pbix.bak
+
+# Synthetic gold for building the Power BI report (tools/make_sample_gold.py)
+data/sample_gold/

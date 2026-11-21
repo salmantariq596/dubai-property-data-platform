@@ -1,0 +1,52 @@
+expression GoldSource = "Parquet" meta [IsParameterQuery=true, List={"Databricks", "Parquet"}, DefaultValue="Databricks", Type="Text", IsParameterQueryRequired=true]
+	lineageTag: ae8a4e2d-2507-4511-9911-bc73a03028be
+
+	annotation PBI_ResultType = Text
+
+expression DatabricksHost = "adb-0000000000000000.0.azuredatabricks.net" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: c8d39d2c-5157-4e39-83a2-0d3c1efd3cbb
+
+	annotation PBI_ResultType = Text
+
+expression DatabricksHttpPath = "/sql/1.0/warehouses/0000000000000000" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: ac576895-34f7-418c-9c91-e4a154eeb794
+
+	annotation PBI_ResultType = Text
+
+expression GoldCatalog = "dubai" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 43e3083b-bc4f-418e-8121-3168658ac41b
+
+	annotation PBI_ResultType = Text
+
+expression GoldFolder = "E:\Data Engineer\Dubai Property Data Platform(DPDP)\code\module-1\dubai-property-data-platform\data\sample_gold" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 1c6bec87-9585-48ce-9de6-6bf80627a393
+
+	annotation PBI_ResultType = Text
+
+expression GoldTable =
+		(table_name as text) as table =>
+		let
+		    FromDatabricks = () =>
+		        let
+		            // Looked up only when GoldSource is Databricks: Power BI does not know the
+		            // connector's name until it has been used, which would break the Parquet route too.
+		            Connector = Record.FieldOrDefault(#shared, "Databricks.Catalogs", Record.FieldOrDefault(#shared, "DatabricksMultiCloud.Catalogs")),
+		            Source = Connector(DatabricksHost, DatabricksHttpPath, [Catalog = null, Database = null, EnableAutomaticProxyDiscovery = null]),
+		            CatalogData = Source{[Name = GoldCatalog, Kind = "Database"]}[Data],
+		            Gold = CatalogData{[Name = "gold", Kind = "Schema"]}[Data],
+		            Result = Gold{[Name = table_name, Kind = "Table"]}[Data]
+		        in
+		            Result,
+		    FromParquet = () =>
+		        let
+		            Files = Folder.Files(GoldFolder & "\" & table_name),
+		            ParquetFiles = Table.SelectRows(Files, each [Extension] = ".parquet"),
+		            Result = Table.Combine(List.Transform(ParquetFiles[Content], each Parquet.Document(_)))
+		        in
+		            Result
+		in
+		    if GoldSource = "Parquet" then FromParquet() else FromDatabricks()
+	lineageTag: 7efffc80-27c8-4369-9587-e66d8fb7a183
+
+	annotation PBI_ResultType = Function
+

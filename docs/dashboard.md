@@ -1,11 +1,11 @@
 # Dashboard: Dubai property market
 
-Four pages, one message each. Every page answers questions from [business_questions.md](business_questions.md). Setup: [powerbi/README.md](../powerbi/README.md).
+Four pages, one message each. Every page answers questions from [business_questions.md](business_questions.md). The report is built: `powerbi/DubaiPropertyMarket.pbip` ([how to open it](../powerbi/README.md)). This page is its specification.
 
 ## On every page
 
 - **Slicers** (top bar, synced across pages): `dim_date[year]` (between), `dim_area[current_area_name_en]` (dropdown, search on), `dim_property_type[property_type]` (dropdown).
-- **Arabic tooltip:** a tooltip page (*Page information → Allow use as tooltip*, 320 × 120) showing `dim_area[current_area_name_ar]` large, and the measures `Median Price per Sqft` and `Sales`. Set it as the tooltip on every visual that shows areas.
+- **Arabic tooltip:** every visual that shows areas has the `Area (Arabic)` measure in its tooltip.
 - **Footer text:** "Source: Dubai Land Department open data. Registered transactions; outliers excluded from medians. Latest month is preliminary."
 - **Colours:** theme only. Teal (`#0F4C5C`) for the main series, orange (`#E36414`) for comparison (off-plan, last year).
 
@@ -67,6 +67,11 @@ All in the model (`powerbi/model/definition/tables/fact_*.tmdl`), with the same 
 | `Median Price per Sqft Off-plan` / `Ready`, `Off-plan Premium %` | Medians per registration type, and the gap |
 | `Contracts`, `Median Annual Rent AED` | Contract count, and median rent over single-unit contracts |
 | `Gross Yield %` | Median rent / median sale price; blank unless `Priced Sales` and `Priced Contracts` are both at least 10 |
+| `Price Growth % (50+ sales)` | YoY change in median price per sqft, blank below 50 priced sales: keeps tiny areas off the "fastest risers" chart |
+| `Off-plan Premium % (20+ off-plan)` | Off-plan premium, blank below 20 off-plan sales |
+| `Area (Arabic)` | The area's Arabic name, for tooltips |
+
+`fact_sales[Registration]` ("Off-plan" / "Ready") labels the share chart. The Property type slicer hides "All types", which exists only for the monthly aggregate's roll-up and has no facts; the projects table hides "Unknown".
 
 ## Checklist before export
 

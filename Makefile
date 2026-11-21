@@ -25,12 +25,12 @@ setup-spark: setup
 	$(PY) -m pip install -e ".[dev,spark]"
 
 lint:
-	$(PY) -m ruff check src tests
-	$(PY) -m ruff format --check src tests
+	$(PY) -m ruff check src tests tools
+	$(PY) -m ruff format --check src tests tools
 
 format:
-	$(PY) -m ruff check --fix src tests
-	$(PY) -m ruff format src tests
+	$(PY) -m ruff check --fix src tests tools
+	$(PY) -m ruff format src tests tools
 
 test:
 	$(PY) -m pytest --cov=dubai_property --cov-report=term-missing

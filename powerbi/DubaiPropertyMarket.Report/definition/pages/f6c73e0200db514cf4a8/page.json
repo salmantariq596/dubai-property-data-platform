@@ -1,0 +1,8 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "f6c73e0200db514cf4a8",
+  "displayName": "Rental yield",
+  "displayOption": "FitToPage",
+  "height": 1080,
+  "width": 1920
+}

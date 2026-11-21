@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "DubaiPropertyMarket"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "8b628b0d-f58b-4ea8-8245-2e86e3f02093"
+  }
+}

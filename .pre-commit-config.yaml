@@ -4,6 +4,9 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        # Power BI Desktop writes its project files without a final newline;
+        # adding one would make every save show up as a change.
+        exclude: ^powerbi/DubaiPropertyMarket\.
       - id: check-yaml
       - id: check-added-large-files
         args: ["--maxkb=5000"]

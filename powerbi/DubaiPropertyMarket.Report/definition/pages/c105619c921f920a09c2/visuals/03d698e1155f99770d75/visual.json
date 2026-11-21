@@ -1,0 +1,66 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "03d698e1155f99770d75",
+  "position": {
+    "x": 40,
+    "y": 120,
+    "z": 5000,
+    "height": 150,
+    "width": 1840,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_sales"
+                    }
+                  },
+                  "Property": "Off-plan Share"
+                }
+              },
+              "queryRef": "fact_sales.Off-plan Share",
+              "nativeQueryRef": "Off-plan Share"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_sales"
+                    }
+                  },
+                  "Property": "Off-plan Premium %"
+                }
+              },
+              "queryRef": "fact_sales.Off-plan Premium %",
+              "nativeQueryRef": "Off-plan Premium %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_sales"
+                    }
+                  },
+                  "Property": "Off-plan Sales"
+                }
+              },
+              "queryRef": "fact_sales.Off-plan Sales",
+              "nativeQueryRef": "Off-plan Sales"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

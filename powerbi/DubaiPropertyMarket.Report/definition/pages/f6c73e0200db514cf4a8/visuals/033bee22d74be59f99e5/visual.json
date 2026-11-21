@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "033bee22d74be59f99e5",
+  "position": {
+    "x": 960,
+    "y": 870,
+    "z": 8000,
+    "height": 150,
+    "width": 920,
+    "tabOrder": 8000
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Gross yield = median annual rent / median sale price for the same area, type and period, shown only when each side has at least 10 records. Before service charges, vacancy and fees.",
+                    "textStyle": {
+                      "fontSize": "12pt",
+                      "color": "#52606D"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

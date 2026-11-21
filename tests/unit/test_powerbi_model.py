@@ -107,7 +107,8 @@ def test_parameters_and_source_function():
     for parameter in ("GoldSource", "DatabricksHost", "DatabricksHttpPath", "GoldCatalog"):
         assert f"expression {parameter} = " in text
     assert "expression GoldTable =" in text
-    assert "Databricks.Catalogs(" in text and "Parquet.Document(" in text
+    assert "Databricks.Catalogs" in text and "Parquet.Document(" in text
+    assert "Connector(DatabricksHost" in text  # looked up at run time, see expressions.tmdl
 
 
 def test_theme():

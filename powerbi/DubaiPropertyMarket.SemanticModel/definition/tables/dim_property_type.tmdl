@@ -1,0 +1,45 @@
+table dim_property_type
+	lineageTag: fbd17a39-5374-48fe-8402-9ccb07f1589e
+
+	column property_type_sk
+		dataType: int64
+		isHidden
+		lineageTag: 247c371d-47a6-4627-96a7-4778767a6fda
+		summarizeBy: none
+		sourceColumn: property_type_sk
+
+	column property_type_key
+		dataType: string
+		isHidden
+		lineageTag: 086fa9d1-9ca9-4358-8455-d5f0855f4567
+		summarizeBy: none
+		sourceColumn: property_type_key
+
+	column property_type
+		dataType: string
+		lineageTag: 4d128af5-0081-40ab-bfe0-cce7828dc8b4
+		summarizeBy: none
+		sourceColumn: property_type
+
+	column property_sub_type
+		dataType: string
+		lineageTag: c9373df3-1546-4176-a9f8-f816e5832244
+		summarizeBy: none
+		sourceColumn: property_sub_type
+
+	column in_sales
+		dataType: boolean
+		lineageTag: 45235221-6ff8-43b1-bce5-66228210468d
+		summarizeBy: none
+		sourceColumn: in_sales
+
+	column in_rents
+		dataType: boolean
+		lineageTag: d04840bc-651c-41d7-8c50-e00d1de1cd2b
+		summarizeBy: none
+		sourceColumn: in_rents
+
+	partition dim_property_type = m
+		mode: import
+		source = GoldTable("dim_property_type")
+

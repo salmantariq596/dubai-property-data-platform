@@ -1,0 +1,66 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "f30252b1fd202fe82031",
+  "position": {
+    "x": 40,
+    "y": 120,
+    "z": 5000,
+    "height": 150,
+    "width": 1840,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_rents"
+                    }
+                  },
+                  "Property": "Gross Yield %"
+                }
+              },
+              "queryRef": "fact_rents.Gross Yield %",
+              "nativeQueryRef": "Gross Yield %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_rents"
+                    }
+                  },
+                  "Property": "Median Annual Rent AED"
+                }
+              },
+              "queryRef": "fact_rents.Median Annual Rent AED",
+              "nativeQueryRef": "Median Annual Rent AED"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "fact_sales"
+                    }
+                  },
+                  "Property": "Median Sale Price AED"
+                }
+              },
+              "queryRef": "fact_sales.Median Sale Price AED",
+              "nativeQueryRef": "Median Sale Price AED"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

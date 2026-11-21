@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-MODEL = Path(__file__).parents[1] / "powerbi" / "model" / "definition"
+MODEL = Path(__file__).parents[1] / "powerbi" / "DubaiPropertyMarket.SemanticModel" / "definition"
 
 _NAME = r"('[^']+'|[A-Za-z_][\w]*)"
 
