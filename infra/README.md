@@ -8,6 +8,7 @@ The whole Azure platform, built from code. Design: [ADR 0007](../docs/adr/0007-a
 | `platform/` | Resource group, ADLS Gen2 (`raw`, `bronze`, `silver`, `gold`), Databricks workspace (Premium), access connector (managed identity), Key Vault, Data Factory, role assignments | Remote: `platform.tfstate` |
 | `unity-catalog/` | Storage credential, external locations, catalog `dubai`, schemas, volumes | Remote: `unity-catalog.tfstate` |
 | `orchestration/` | Data Factory linked services, datasets, pipelines (`adf/pipeline/`), daily trigger | Remote: `orchestration.tfstate` |
+| `cicd/` | Entra app with GitHub OIDC federated credentials (no secret), workspace admin, catalog access, for deploying from GitHub Actions | Remote: `cicd.tfstate` |
 
 No service uses an account key or password: storage account keys are disabled, and every connection is a managed identity with one role assignment.
 
