@@ -88,4 +88,9 @@ SPARK_TO_TMDL = {
 
 
 def tmdl_type(spark_type: str) -> str:
-    return "decimal" if spark_type.startswith("decimal") else SPARK_TO_TMDL[spark_type]
+    """The type Power BI gives a gold column when it imports it.
+
+    Power Query loads source decimals as "Decimal Number", which TMDL stores as
+    ``double``; only an explicit currency type would keep them fixed-point.
+    """
+    return "double" if spark_type.startswith("decimal") else SPARK_TO_TMDL[spark_type]
