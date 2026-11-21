@@ -22,6 +22,7 @@ dev = [
     "pre-commit>=3.7",
     "jupyter>=1.0",
     "pyyaml>=6.0",  # reads databricks.yml in tests
+    "pyarrow>=14.0",  # tools/make_sample_gold.py writes Parquet
 ]
 # Local Spark for the bronze tests. Databricks provides its own Spark, so this
 # is never installed there. PySpark and Delta versions must match each other.
