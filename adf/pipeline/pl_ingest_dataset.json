@@ -1,0 +1,75 @@
+{
+  "name": "pl_ingest_dataset",
+  "properties": {
+    "description": "Copy one source file, byte for byte, to raw/landing/<dataset>/load_date=<load_date>/<dataset>.csv.",
+    "parameters": {
+      "dataset": {
+        "type": "String",
+        "defaultValue": "transactions"
+      },
+      "load_date": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "source_url": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "activities": [
+      {
+        "name": "Copy source file to raw",
+        "type": "Copy",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 300
+        },
+        "inputs": [
+          {
+            "referenceName": "ds_source_file",
+            "type": "DatasetReference",
+            "parameters": {
+              "relative_url": {
+                "value": "@replace(pipeline().parameters.source_url, '{load_date}', pipeline().parameters.load_date)",
+                "type": "Expression"
+              }
+            }
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "ds_landing_file",
+            "type": "DatasetReference",
+            "parameters": {
+              "dataset": {
+                "value": "@pipeline().parameters.dataset",
+                "type": "Expression"
+              },
+              "load_date": {
+                "value": "@pipeline().parameters.load_date",
+                "type": "Expression"
+              }
+            }
+          }
+        ],
+        "typeProperties": {
+          "source": {
+            "type": "BinarySource",
+            "storeSettings": {
+              "type": "HttpReadSettings",
+              "requestMethod": "GET"
+            }
+          },
+          "sink": {
+            "type": "BinarySink",
+            "storeSettings": {
+              "type": "AzureBlobFSWriteSettings"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

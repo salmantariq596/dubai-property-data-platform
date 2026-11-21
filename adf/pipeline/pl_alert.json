@@ -1,0 +1,74 @@
+{
+  "name": "pl_alert",
+  "properties": {
+    "description": "Post a message to the alert webhook (if one is set), then fail with it.",
+    "parameters": {
+      "message": {
+        "type": "String",
+        "defaultValue": "Pipeline failed"
+      },
+      "alert_webhook_url": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "activities": [
+      {
+        "name": "Webhook configured",
+        "type": "IfCondition",
+        "dependsOn": [],
+        "typeProperties": {
+          "expression": {
+            "value": "@not(empty(pipeline().parameters.alert_webhook_url))",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "Post alert",
+              "type": "WebActivity",
+              "dependsOn": [],
+              "policy": {
+                "timeout": "0.00:05:00",
+                "retry": 2,
+                "retryIntervalInSeconds": 30
+              },
+              "typeProperties": {
+                "method": "POST",
+                "url": {
+                  "value": "@pipeline().parameters.alert_webhook_url",
+                  "type": "Expression"
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "body": {
+                  "value": "{\"text\": \"@{pipeline().parameters.message}\"}",
+                  "type": "Expression"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Fail with message",
+        "type": "Fail",
+        "dependsOn": [
+          {
+            "activity": "Webhook configured",
+            "dependencyConditions": [
+              "Completed"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "message": {
+            "value": "@pipeline().parameters.message",
+            "type": "Expression"
+          },
+          "errorCode": "DPDP_PIPELINE_FAILED"
+        }
+      }
+    ]
+  }
+}

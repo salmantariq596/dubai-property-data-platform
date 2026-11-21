@@ -1,0 +1,69 @@
+# The daily job: one task per step, each waiting for the one before.
+# Data Factory starts it with load_id = its own run id (adf/pipeline/pl_daily.json).
+
+resources:
+  jobs:
+    daily_pipeline:
+      name: dpdp-daily-pipeline
+      description: bronze → checks → silver → checks → gold → checks. A failed check stops the run before the next layer.
+      max_concurrent_runs: 1
+      timeout_seconds: 14400
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: datasets
+          default: transactions,rents
+        - name: load_id
+          default: "{{job.run_id}}"
+
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}
+
+      tasks:
+        - task_key: bronze
+          notebook_task:
+            notebook_path: ../notebooks/08_job_step.py
+            base_parameters:
+              step: bronze
+
+        - task_key: quality_bronze
+          depends_on:
+            - task_key: bronze
+          notebook_task:
+            notebook_path: ../notebooks/08_job_step.py
+            base_parameters:
+              step: quality_bronze
+
+        - task_key: silver
+          depends_on:
+            - task_key: quality_bronze
+          notebook_task:
+            notebook_path: ../notebooks/08_job_step.py
+            base_parameters:
+              step: silver
+
+        - task_key: quality_silver
+          depends_on:
+            - task_key: silver
+          notebook_task:
+            notebook_path: ../notebooks/08_job_step.py
+            base_parameters:
+              step: quality_silver
+
+        - task_key: gold
+          depends_on:
+            - task_key: quality_silver
+          notebook_task:
+            notebook_path: ../notebooks/08_job_step.py
+            base_parameters:
+              step: gold
+
+        - task_key: quality_gold
+          depends_on:
+            - task_key: gold
+          notebook_task:
+            notebook_path: ../notebooks/08_job_step.py
+            base_parameters:
+              step: quality_gold

@@ -1,0 +1,62 @@
+{
+  "name": "pl_land_day",
+  "properties": {
+    "description": "Land every dataset for one load date, in parallel.",
+    "parameters": {
+      "load_date": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "datasets": {
+        "type": "String",
+        "defaultValue": "transactions,rents"
+      },
+      "source_urls": {
+        "type": "String",
+        "defaultValue": "{}"
+      }
+    },
+    "activities": [
+      {
+        "name": "Each dataset",
+        "type": "ForEach",
+        "dependsOn": [],
+        "typeProperties": {
+          "items": {
+            "value": "@split(pipeline().parameters.datasets, ',')",
+            "type": "Expression"
+          },
+          "isSequential": false,
+          "activities": [
+            {
+              "name": "Land dataset",
+              "type": "ExecutePipeline",
+              "dependsOn": [],
+              "typeProperties": {
+                "pipeline": {
+                  "referenceName": "pl_ingest_dataset",
+                  "type": "PipelineReference"
+                },
+                "waitOnCompletion": true,
+                "parameters": {
+                  "dataset": {
+                    "value": "@trim(item())",
+                    "type": "Expression"
+                  },
+                  "load_date": {
+                    "value": "@pipeline().parameters.load_date",
+                    "type": "Expression"
+                  },
+                  "source_url": {
+                    "value": "@json(pipeline().parameters.source_urls)[trim(item())]",
+                    "type": "Expression"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

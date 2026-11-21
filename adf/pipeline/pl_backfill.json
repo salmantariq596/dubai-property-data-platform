@@ -1,0 +1,156 @@
+{
+  "name": "pl_backfill",
+  "properties": {
+    "description": "Land every day from start_date to end_date (inclusive), one day at a time, then run the Databricks job once: bronze picks up all the new files in one run.",
+    "parameters": {
+      "start_date": {
+        "type": "String",
+        "defaultValue": "2024-01-01"
+      },
+      "end_date": {
+        "type": "String",
+        "defaultValue": "2024-01-31"
+      },
+      "datasets": {
+        "type": "String",
+        "defaultValue": "transactions,rents"
+      },
+      "source_urls": {
+        "type": "String",
+        "defaultValue": "{}"
+      },
+      "catalog": {
+        "type": "String",
+        "defaultValue": "dubai"
+      },
+      "databricks_host": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "databricks_job_id": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "alert_webhook_url": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "activities": [
+      {
+        "name": "Each day",
+        "type": "ForEach",
+        "dependsOn": [],
+        "typeProperties": {
+          "items": {
+            "value": "@range(0, add(div(sub(ticks(pipeline().parameters.end_date), ticks(pipeline().parameters.start_date)), 864000000000), 1))",
+            "type": "Expression"
+          },
+          "isSequential": true,
+          "activities": [
+            {
+              "name": "Land day",
+              "type": "ExecutePipeline",
+              "dependsOn": [],
+              "typeProperties": {
+                "pipeline": {
+                  "referenceName": "pl_land_day",
+                  "type": "PipelineReference"
+                },
+                "waitOnCompletion": true,
+                "parameters": {
+                  "load_date": {
+                    "value": "@formatDateTime(addDays(pipeline().parameters.start_date, item()), 'yyyy-MM-dd')",
+                    "type": "Expression"
+                  },
+                  "datasets": {
+                    "value": "@pipeline().parameters.datasets",
+                    "type": "Expression"
+                  },
+                  "source_urls": {
+                    "value": "@pipeline().parameters.source_urls",
+                    "type": "Expression"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Alert landing failed",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Each day",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pl_alert",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "message": {
+              "value": "@concat('Landing source files failed: ', pipeline().parameters.start_date, ' to ', pipeline().parameters.end_date)",
+              "type": "Expression"
+            },
+            "alert_webhook_url": {
+              "value": "@pipeline().parameters.alert_webhook_url",
+              "type": "Expression"
+            }
+          }
+        }
+      },
+      {
+        "name": "Run Databricks job",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Each day",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pl_run_job",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "load_id": {
+              "value": "@pipeline().RunId",
+              "type": "Expression"
+            },
+            "datasets": {
+              "value": "@pipeline().parameters.datasets",
+              "type": "Expression"
+            },
+            "catalog": {
+              "value": "@pipeline().parameters.catalog",
+              "type": "Expression"
+            },
+            "databricks_host": {
+              "value": "@pipeline().parameters.databricks_host",
+              "type": "Expression"
+            },
+            "databricks_job_id": {
+              "value": "@pipeline().parameters.databricks_job_id",
+              "type": "Expression"
+            },
+            "alert_webhook_url": {
+              "value": "@pipeline().parameters.alert_webhook_url",
+              "type": "Expression"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
