@@ -2,6 +2,25 @@
 
 Each module is merged with a pull request and tagged.
 
+## [Unreleased] — Module 7: Azure infrastructure with Terraform (code ready, apply pending)
+
+### Added
+- `infra/bootstrap`: monthly subscription budget with email alerts (50% and 80% actual, 100% forecast); versioned, soft-deleted storage for Terraform state.
+- `infra/platform`, in UAE North:
+  - resource group;
+  - ADLS Gen2 lake with `raw`, `bronze`, `silver` and `gold` containers;
+  - Databricks workspace (Premium) and access connector;
+  - Key Vault (RBAC);
+  - Data Factory.
+  Storage account keys are disabled, and every connection is a managed identity with one role.
+- `infra/unity-catalog`: storage credential on the access connector's managed identity, an external location per container, catalog `dubai` with `raw`/`bronze`/`silver`/`gold`/`quality` schemas (each layer's managed tables in its own container), and the `landing`, `checkpoints` and `exports` volumes.
+- CI job: `terraform fmt -check` and `terraform validate` on all three stacks.
+- 14 unit tests guarding the design: no account keys, no public blobs, TLS 1.2, ADLS Gen2, Premium workspace, RBAC Key Vault, managed identity for Unity Catalog, remote state, no real ids or emails in example files.
+- ADR 0007 and `infra/README.md` (build, destroy-and-rebuild proof, costs).
+
+### To do before v0.7.0
+- Activate the Azure subscription, apply the three stacks, prove destroy and rebuild, screenshot the resource group.
+
 ## [Unreleased] — Module 6: Power BI dashboard (model ready, pages to build)
 
 ### Added

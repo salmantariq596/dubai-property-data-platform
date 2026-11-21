@@ -36,6 +36,7 @@ derby.log
 *.tfvars
 !example.tfvars
 .terraform.lock.hcl
+infra/**/backend.hcl
 
 # Databricks Asset Bundles
 .databricks/
