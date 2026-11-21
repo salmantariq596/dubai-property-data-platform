@@ -37,6 +37,10 @@ _BASE_CONF = {
     "spark.driver.memory": "3g",
     "spark.sql.maxPlanStringLength": "100000",
     "spark.sql.ui.retainedExecutions": "20",
+    # Delta rebuilds a table's state from its log in 50 tasks by default, sized for a
+    # cluster. Test tables have a handful of commits: 2 tasks is much faster.
+    "spark.databricks.delta.snapshotPartitions": "2",
+    "spark.default.parallelism": "2",
 }
 
 

@@ -30,6 +30,7 @@ Each module is merged with a pull request and tagged.
 - The Databricks connector is looked up at run time, so the Parquet route works on Power BI versions that have not loaded the connector.
 - `Median Price per Sqft YoY %` rewritten without variables.
 - Lint covers `tools/`.
+- CI split into parallel jobs: lint and unit tests (no Spark), three Spark test groups on separate runners, and one combined coverage report. A newer push cancels the run in progress; the Delta jar cache no longer resets on every `pyproject.toml` change; Delta log replay uses 2 tasks instead of 50 in tests. A unit test fails if a Spark test file is missing from the CI groups.
 
 ### To do before v0.6.0
 - Load real data, export the PDF and screenshots, and write three insights.

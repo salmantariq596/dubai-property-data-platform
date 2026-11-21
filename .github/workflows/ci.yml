@@ -5,13 +5,71 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push to the same branch or pull request cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint-and-test:
+  # Fast feedback: no Java, no Spark. Finishes in about a minute.
+  lint-and-unit:
+    name: Lint and unit tests
     runs-on: ubuntu-latest
     env:
+      COVERAGE_FILE: .coverage.unit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: |
+          ruff check src tests tools
+          ruff format --check src tests tools
+
+      - name: Unit tests
+        run: pytest tests/unit --cov=dubai_property --cov-report=
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: .coverage.unit
+          include-hidden-files: true
+
+  # Spark and Delta tests, split into groups that run at the same time on
+  # separate runners. Balance the groups with the --durations output.
+  spark:
+    name: Spark tests (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: bronze-silver
+            tests: >-
+              tests/spark/test_bronze_ingest.py
+              tests/spark/test_silver_transform.py
+              tests/spark/test_silver_pipeline.py
+          - group: gold
+            tests: >-
+              tests/spark/test_gold_model.py
+              tests/spark/test_powerbi_gold.py
+          - group: pipelines
+            tests: >-
+              tests/spark/test_gold_pipeline.py
+              tests/spark/test_quality_checks.py
+              tests/integration
+    env:
       # Fail (don't skip) if Delta Lake can't start, so the Delta-only tests
-      # for idempotent writes and append-only tables always run here.
+      # always run here.
       REQUIRE_DELTA: "1"
+      COVERAGE_FILE: .coverage.${{ matrix.group }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,19 +83,46 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Keyed on the Spark and Delta versions only, so unrelated pyproject
+      # changes (a version bump) do not throw the downloaded jars away.
+      # Update the key when the spark extra in pyproject.toml changes.
       - name: Cache Delta Lake jars
         uses: actions/cache@v4
         with:
           path: ~/.ivy2
-          key: ivy-${{ hashFiles('pyproject.toml') }}
+          key: ivy-pyspark-4.0.1-delta-4.0.0
 
       - name: Install
         run: pip install -e ".[dev,spark]"
 
-      - name: Lint
-        run: |
-          ruff check src tests tools
-          ruff format --check src tests tools
+      - name: Spark tests
+        run: pytest ${{ matrix.tests }} --durations=10 --cov=dubai_property --cov-report=
 
-      - name: Tests (unit + Spark/Delta)
-        run: pytest --cov=dubai_property --cov-report=term-missing
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.group }}
+          path: .coverage.${{ matrix.group }}
+          include-hidden-files: true
+
+  # One coverage figure for the whole suite, as before the split.
+  coverage:
+    name: Coverage
+    needs: [lint-and-unit, spark]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+
+      - name: Combine and report
+        run: |
+          pip install coverage
+          coverage combine .coverage.*
+          coverage report --show-missing
