@@ -42,6 +42,27 @@ jobs:
           path: .coverage.unit
           include-hidden-files: true
 
+  # Infrastructure code: formatted and valid (no Azure credentials needed).
+  terraform:
+    name: Terraform fmt and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Format
+        run: terraform fmt -check -recursive -diff infra
+
+      - name: Validate
+        run: |
+          for stack in bootstrap platform unity-catalog; do
+            terraform -chdir=infra/$stack init -backend=false -input=false
+            terraform -chdir=infra/$stack validate
+          done
+
   # Spark and Delta tests, split into groups that run at the same time on
   # separate runners. Balance the groups with the --durations output.
   spark:

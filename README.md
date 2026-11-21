@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 6 of 10 — Power BI dashboard (report built; waiting for real data).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 7 of 10 — Azure infrastructure with Terraform (code ready; deployment next).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -115,6 +115,27 @@ Four pages in Power BI: Market overview, Area deep-dive, Off-plan vs ready, Rent
 
 Page designs: [dashboard](docs/dashboard.md). Setup: [powerbi/](powerbi/README.md). Design reasoning: [ADR 0006](docs/adr/0006-power-bi-model.md). *Screenshots follow once real data is loaded; until then the report runs on synthetic sample data (`tools/make_sample_gold.py`).*
 
+## Infrastructure: Azure from code, no keys
+
+```mermaid
+flowchart LR
+    T[Terraform] --> RG[rg-dpdp-dev]
+    RG --> L[(ADLS Gen2<br/>raw · bronze · silver · gold)]
+    RG --> W[Databricks workspace]
+    RG --> K[Key Vault]
+    RG --> F[Data Factory]
+    AC[Access connector<br/>managed identity] -->|Storage Blob Data Contributor| L
+    W --> UC[Unity Catalog<br/>catalog dubai]
+    UC -->|storage credential| AC
+    F -->|managed identity| L
+```
+
+- **Three stacks:** `bootstrap` (budget alert and state storage), `platform` (Azure resources) and `unity-catalog` (catalog, schemas, volumes), applied in that order.
+- **No keys anywhere.** Storage account keys are disabled; Unity Catalog and Data Factory reach the lake through managed identities with one role each.
+- **Checked on every pull request:** `terraform fmt` and `validate` run in CI, and unit tests fail if a security choice drifts.
+
+How to deploy, rebuild and keep costs down: [infra/](infra/README.md). Design reasoning: [ADR 0007](docs/adr/0007-azure-infrastructure.md).
+
 ## Repository layout
 
 ```
@@ -129,7 +150,7 @@ Page designs: [dashboard](docs/dashboard.md). Setup: [powerbi/](powerbi/README.m
 │   ├── utils/
 ├── notebooks/            # thin notebooks that call src/
 ├── tests/                # unit/, spark/, integration/, fixtures/
-├── infra/                # Terraform
+├── infra/                # Terraform: bootstrap, platform, unity-catalog
 ├── adf/                  # exported Data Factory pipelines
 ├── powerbi/              # semantic model (TMDL), theme, report and PDF export
 └── docs/                 # data sources, dictionary, decisions, profiles
@@ -174,7 +195,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ v0.4 |
 | 5 | Data quality framework and integration tests | ✅ v0.5 |
 | 6 | Power BI dashboard (minimum complete version) | 🔧 report built; real data, PDF and insights to come |
-| 7 | Azure infrastructure with Terraform | ⏳ |
+| 7 | Azure infrastructure with Terraform | 🔧 code ready, apply pending |
 | 8 | Data Factory orchestration, Asset Bundles | ⏳ |
 | 9 | CI/CD deploy, monitoring, runbook, cost | ⏳ |
 | 10 | Demo video and final write-up | ⏳ |
@@ -189,6 +210,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 - [0004 — Gold star schema: hash surrogate keys, SCD Type 2 areas, full rebuilds](docs/adr/0004-gold-star-schema.md)
 - [0005 — Data quality: checks between layers, dq_results, fail before the next layer](docs/adr/0005-data-quality.md)
 - [0006 — Power BI model as code: import mode over gold, measures in DAX](docs/adr/0006-power-bi-model.md)
+- [0007 — Azure infrastructure: three Terraform stacks, identities instead of keys](docs/adr/0007-azure-infrastructure.md)
 
 ## License
 
