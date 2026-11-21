@@ -1,0 +1,63 @@
+table dim_project
+	lineageTag: aa9fe3aa-19c4-4f29-8635-53e5460d5d94
+
+	column project_sk
+		dataType: int64
+		isHidden
+		lineageTag: 0733b562-61a6-4a09-b0f0-fe2da5fb2a0e
+		summarizeBy: none
+		sourceColumn: project_sk
+
+	column project_key
+		dataType: string
+		isHidden
+		lineageTag: aaa349fe-fb28-436c-b68f-9842ac405687
+		summarizeBy: none
+		sourceColumn: project_key
+
+	column project_name_en
+		dataType: string
+		lineageTag: 640d1b01-a557-42ea-82f1-3135c501182c
+		summarizeBy: none
+		sourceColumn: project_name_en
+
+	column project_number
+		dataType: string
+		lineageTag: a03fd922-f70f-499f-a171-e8ec11a3a8bc
+		summarizeBy: none
+		sourceColumn: project_number
+
+	column master_project_en
+		dataType: string
+		lineageTag: 48d11ff6-b8a6-4f80-9325-c22b4a77e47f
+		summarizeBy: none
+		sourceColumn: master_project_en
+
+	column developer_name
+		dataType: string
+		lineageTag: 069a3af4-c763-4b98-829a-823147705476
+		summarizeBy: none
+		sourceColumn: developer_name
+
+	column project_status
+		dataType: string
+		lineageTag: c4cf8d1e-47c6-4d0d-9583-096b298a0f0d
+		summarizeBy: none
+		sourceColumn: project_status
+
+	column in_sales
+		dataType: boolean
+		lineageTag: 0ad8ef36-bad8-44a0-b391-c0df5031d8f3
+		summarizeBy: none
+		sourceColumn: in_sales
+
+	column in_rents
+		dataType: boolean
+		lineageTag: 244f2b6c-c12d-4634-a827-1dff7c3ea961
+		summarizeBy: none
+		sourceColumn: in_rents
+
+	partition dim_project = m
+		mode: import
+		source = GoldTable("dim_project")
+

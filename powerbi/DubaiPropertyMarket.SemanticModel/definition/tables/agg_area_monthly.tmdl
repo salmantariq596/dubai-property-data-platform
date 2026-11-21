@@ -1,0 +1,129 @@
+table agg_area_monthly
+	lineageTag: 7e8a96b7-23a3-4fe1-9106-454556519ec2
+
+	column month_key
+		dataType: int64
+		isHidden
+		lineageTag: f3c57533-e2c6-4fc5-9f30-2582c678a196
+		summarizeBy: none
+		sourceColumn: month_key
+
+	column month_start
+		dataType: dateTime
+		formatString: mmm yyyy
+		lineageTag: a64fcf89-2e1a-427d-b84f-c3c745ba1f71
+		summarizeBy: none
+		sourceColumn: month_start
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column area_key
+		dataType: string
+		isHidden
+		lineageTag: eb0877e0-b988-42bb-8c50-3824f06b61e4
+		summarizeBy: none
+		sourceColumn: area_key
+
+	column area_sk
+		dataType: int64
+		isHidden
+		lineageTag: 1921bdcc-fd3f-4ff5-8fdf-53947e9a1fcb
+		summarizeBy: none
+		sourceColumn: area_sk
+
+	column area_name_en
+		dataType: string
+		lineageTag: 140b0fd2-e7ba-4c72-b228-b3d5aaf04768
+		summarizeBy: none
+		sourceColumn: area_name_en
+
+	column property_type_sk
+		dataType: int64
+		isHidden
+		lineageTag: 6f8833b8-67c8-4e87-844b-ae4188b31243
+		summarizeBy: none
+		sourceColumn: property_type_sk
+
+	column sales_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: f3e11c98-5c91-4629-ae59-c08f0b6511b4
+		summarizeBy: none
+		sourceColumn: sales_count
+
+	column sales_value_aed
+		dataType: double
+		formatString: #,0
+		lineageTag: 49721c1e-3a93-4289-8766-9d5a223a2792
+		summarizeBy: sum
+		sourceColumn: sales_value_aed
+
+		annotation SummarizationSetBy = Automatic
+
+	column offplan_sales_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: 7a705485-a79f-44ba-b6e7-d3bf0dec2951
+		summarizeBy: none
+		sourceColumn: offplan_sales_count
+
+	column priced_sales_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: d83946b9-e10d-48b4-ab5a-1d7243fc4225
+		summarizeBy: none
+		sourceColumn: priced_sales_count
+
+	column median_price_per_sqft
+		dataType: double
+		formatString: #,0
+		lineageTag: f1b6684f-b7fa-4b94-abd7-45be645f1491
+		summarizeBy: none
+		sourceColumn: median_price_per_sqft
+
+	column median_price_per_sqft_yoy_pct
+		dataType: double
+		formatString: 0.0
+		lineageTag: 493b500e-364f-4164-a63b-6a2c1f56f0b8
+		summarizeBy: none
+		sourceColumn: median_price_per_sqft_yoy_pct
+
+	column median_sale_price_aed
+		dataType: double
+		formatString: #,0
+		lineageTag: 2f9d70e9-a21b-4349-9cb8-f576a8a098b2
+		summarizeBy: none
+		sourceColumn: median_sale_price_aed
+
+	column rent_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: 9a9ccc69-739e-4e00-8ed0-3ca62ab2da00
+		summarizeBy: none
+		sourceColumn: rent_count
+
+	column priced_rent_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: 9deb1d3a-9c0e-4c35-8a3a-bd499385b771
+		summarizeBy: none
+		sourceColumn: priced_rent_count
+
+	column median_annual_rent_aed
+		dataType: double
+		formatString: #,0
+		lineageTag: 3545a851-0bbf-4358-99f9-76c4eed543ce
+		summarizeBy: none
+		sourceColumn: median_annual_rent_aed
+
+	column gross_yield_pct
+		dataType: double
+		formatString: 0.00
+		lineageTag: 7ee69b72-0a03-4d79-a0ae-2832a3266fce
+		summarizeBy: none
+		sourceColumn: gross_yield_pct
+
+	partition agg_area_monthly = m
+		mode: import
+		source = GoldTable("agg_area_monthly")
+

@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 6 of 10 — Power BI dashboard (model ready; pages being built).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 6 of 10 — Power BI dashboard (report built; waiting for real data).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -113,7 +113,7 @@ Rule catalogue and what to do when a check fails: [data quality](docs/data_quali
 
 Four pages in Power BI: Market overview, Area deep-dive, Off-plan vs ready, Rental yield. The semantic model is code (TMDL), tested against gold in CI so a gold change cannot silently break the report. One parameter switches between a Databricks SQL warehouse and exported Parquet files.
 
-Page designs: [dashboard](docs/dashboard.md). Setup: [powerbi/](powerbi/README.md). Design reasoning: [ADR 0006](docs/adr/0006-power-bi-model.md). *Screenshots follow once the pages are built on real data.*
+Page designs: [dashboard](docs/dashboard.md). Setup: [powerbi/](powerbi/README.md). Design reasoning: [ADR 0006](docs/adr/0006-power-bi-model.md). *Screenshots follow once real data is loaded; until then the report runs on synthetic sample data (`tools/make_sample_gold.py`).*
 
 ## Repository layout
 
@@ -173,7 +173,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ v0.3 |
 | 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ v0.4 |
 | 5 | Data quality framework and integration tests | ✅ v0.5 |
-| 6 | Power BI dashboard (minimum complete version) | 🔧 model ready, pages to build |
+| 6 | Power BI dashboard (minimum complete version) | 🔧 report built; real data, PDF and insights to come |
 | 7 | Azure infrastructure with Terraform | ⏳ |
 | 8 | Data Factory orchestration, Asset Bundles | ⏳ |
 | 9 | CI/CD deploy, monitoring, runbook, cost | ⏳ |

@@ -1,0 +1,128 @@
+table fact_rents
+	lineageTag: 5054e228-7ded-42dd-bce6-ba4579b4af6f
+
+	measure Contracts = COUNTROWS ( fact_rents )
+		formatString: #,0
+		displayFolder: Rents
+		lineageTag: 69524cff-ee36-4a7b-9df4-10cf6140ef04
+
+	measure 'Priced Contracts' = CALCULATE ( COUNTROWS ( fact_rents ), fact_rents[is_multi_unit] = FALSE (), NOT ISBLANK ( fact_rents[annual_rent_aed] ) )
+		formatString: #,0
+		displayFolder: Rents
+		lineageTag: 3b08eb5d-f030-4f93-829c-64ca40904318
+
+	measure 'Median Annual Rent AED' = CALCULATE ( MEDIAN ( fact_rents[annual_rent_aed] ), fact_rents[is_multi_unit] = FALSE () )
+		formatString: #,0
+		displayFolder: Rents
+		lineageTag: 23e45abb-41f8-4a09-acbf-250c41557537
+
+	measure 'Gross Yield %' =
+			VAR Rent = [Median Annual Rent AED]
+			VAR Price = [Median Sale Price AED]
+			VAR Enough = [Priced Sales] >= 10 && [Priced Contracts] >= 10
+			RETURN IF ( Enough, DIVIDE ( Rent, Price ) )
+		formatString: 0.00%
+		displayFolder: Yield
+		lineageTag: 58078a78-60bf-4b89-8add-d2da6a90f8f3
+
+	column contract_id
+		dataType: string
+		lineageTag: 30c5ac0d-9a2b-46be-9cb8-ef17b8d6c785
+		summarizeBy: none
+		sourceColumn: contract_id
+
+	column date_key
+		dataType: int64
+		isHidden
+		lineageTag: 249eddb0-2ff5-4988-8f0b-f64a3d9e673c
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column end_date_key
+		dataType: int64
+		isHidden
+		lineageTag: 8f7ea50d-278b-44ec-8a95-22bbb65c8f56
+		summarizeBy: none
+		sourceColumn: end_date_key
+
+	column area_sk
+		dataType: int64
+		isHidden
+		lineageTag: b5e54f18-1ebc-4599-a353-a21b0027c79c
+		summarizeBy: none
+		sourceColumn: area_sk
+
+	column property_type_sk
+		dataType: int64
+		isHidden
+		lineageTag: 6ea65bfe-3256-48bc-9661-d0af5ab59ff7
+		summarizeBy: none
+		sourceColumn: property_type_sk
+
+	column project_sk
+		dataType: int64
+		isHidden
+		lineageTag: 07ad7885-f711-4e25-8038-923c96c3d7f9
+		summarizeBy: none
+		sourceColumn: project_sk
+
+	column area_key
+		dataType: string
+		isHidden
+		lineageTag: 8b5239f0-0ad5-4071-9e38-f710382a0069
+		summarizeBy: none
+		sourceColumn: area_key
+
+	column annual_rent_aed
+		dataType: double
+		formatString: #,0
+		lineageTag: 5d604168-f357-4064-a508-18b1334ef25f
+		summarizeBy: sum
+		sourceColumn: annual_rent_aed
+
+		annotation SummarizationSetBy = Automatic
+
+	column size_sqft
+		dataType: double
+		formatString: #,0
+		lineageTag: 660a4129-3606-4638-b591-4f144da53a66
+		summarizeBy: sum
+		sourceColumn: size_sqft
+
+		annotation SummarizationSetBy = Automatic
+
+	column contract_days
+		dataType: int64
+		lineageTag: 9dde433b-d1e8-4744-ad9d-4715c8ee5854
+		summarizeBy: none
+		sourceColumn: contract_days
+
+	column is_multi_unit
+		dataType: boolean
+		lineageTag: 0115eda0-4fe3-493b-b9fd-0bb195697e1e
+		summarizeBy: none
+		sourceColumn: is_multi_unit
+
+	column contract_reg_type_en
+		dataType: string
+		lineageTag: 02a4cb82-3e02-425a-9479-0b56185b84bb
+		summarizeBy: none
+		sourceColumn: contract_reg_type_en
+
+	column property_usage_en
+		dataType: string
+		lineageTag: 275f60f2-5d57-4894-9616-21cc1d90e00d
+		summarizeBy: none
+		sourceColumn: property_usage_en
+
+	column _load_id
+		dataType: string
+		isHidden
+		lineageTag: 3e10daa4-ac5e-4e31-a994-c81ef8456dfe
+		summarizeBy: none
+		sourceColumn: _load_id
+
+	partition fact_rents = m
+		mode: import
+		source = GoldTable("fact_rents")
+

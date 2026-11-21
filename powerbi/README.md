@@ -1,57 +1,52 @@
 # Power BI
 
-The dashboard reads only the gold tables. This folder holds:
+The dashboard reads only the gold tables. It is a Power BI Project (`.pbip`): the report and the semantic model are text files, reviewed in pull requests and tested against gold in CI.
 
 | Path | What it is |
 |---|---|
-| `model/definition/` | The semantic model in TMDL: 7 gold tables, 11 relationships, 17 DAX measures, connection parameters |
-| `theme/dubai-market.json` | Colours and fonts for every page |
-| *(you add)* `DubaiPropertyMarket.pbip` + folders | The Power BI project, once the pages are built |
-| *(you add)* `DubaiPropertyMarket.pdf` | PDF export of the report |
+| `DubaiPropertyMarket.pbip` | Open this in Power BI Desktop |
+| `DubaiPropertyMarket.SemanticModel/` | The model (TMDL): 7 gold tables, 11 relationships, 20 DAX measures, connection parameters |
+| `DubaiPropertyMarket.Report/` | The four report pages |
+| `theme/dubai-market.json` | Colours and fonts |
+| *(to add)* `DubaiPropertyMarket.pdf` | PDF export, made from real data |
 
 Page designs: [docs/dashboard.md](../docs/dashboard.md). Design decisions: [ADR 0006](../docs/adr/0006-power-bi-model.md).
 
-## 1. Create the project with the model
+## Open it
 
-Power BI Desktop (free, Windows) builds the report files itself, so start from a blank project and drop the model in:
+Power BI Desktop is free (Windows). Double-click `DubaiPropertyMarket.pbip`, then click **Refresh** if the yellow bar asks.
 
-1. In Power BI Desktop, **File → Options → Preview features**: make sure *Power BI Project (.pbip) save option* is on (it is on by default in recent versions).
-2. Start a blank report and **File → Save as → Power BI project files (*.pbip)**, into this folder, as `DubaiPropertyMarket`. Close Power BI Desktop.
-3. Copy everything inside `powerbi/model/definition/` into `powerbi/DubaiPropertyMarket.SemanticModel/definition/`, replacing the files there.
-4. Open `DubaiPropertyMarket.pbip`. The model view should show 7 tables and 11 relationships.
-
-If Power BI reports a problem with a file in step 4, it names the file and line. Tell me and I'll fix it: the model was written without Power BI Desktop to hand.
-
-## 2. Point it at the data
+## Choose the data
 
 **Home → Transform data → Edit parameters**:
 
-| Parameter | Databricks SQL warehouse | Parquet files (fallback) |
-|---|---|---|
-| `GoldSource` | `Databricks` | `Parquet` |
-| `DatabricksHost` | Server hostname from the warehouse's *Connection details* | (ignored) |
-| `DatabricksHttpPath` | HTTP path from the same page | (ignored) |
-| `GoldCatalog` | `dubai` (or `workspace` on Free Edition) | (ignored) |
-| `GoldFolder` | (ignored) | Folder holding one sub-folder per table, e.g. `C:\dubai-gold` |
-
-- **Databricks:** sign in with a personal access token or Microsoft Entra ID when asked.
-- **Parquet:** run `notebooks/07_export_gold` on Databricks, then download each table folder from the `gold.exports` volume into `GoldFolder`. Use this when no SQL warehouse is available, for example on Free Edition.
+| Parameter | Real data: Databricks SQL warehouse | Real data: Parquet export | Sample data |
+|---|---|---|---|
+| `GoldSource` | `Databricks` | `Parquet` | `Parquet` |
+| `DatabricksHost` | Server hostname (warehouse → *Connection details*) | (ignored) | (ignored) |
+| `DatabricksHttpPath` | HTTP path (same page) | (ignored) | (ignored) |
+| `GoldCatalog` | `dubai` (`workspace` on Free Edition) | (ignored) | (ignored) |
+| `GoldFolder` | (ignored) | Folder with one sub-folder per table | `<repo>\data\sample_gold` |
 
 Then **Close & Apply** and **Refresh**.
 
-## 3. Apply the theme
+- **Databricks:** sign in with a personal access token or Microsoft Entra ID when asked.
+- **Parquet export:** run `notebooks/07_export_gold`, then download each table folder from the `gold.exports` volume into `GoldFolder`.
+- **Sample data:** `python tools/make_sample_gold.py` writes synthetic gold tables to `data/sample_gold/` (git-ignored). It is for building and checking the report before real data exists. **Every number in it is invented: never publish screenshots, PDFs or insights made from it.**
 
-**View → Themes → Browse for themes** → `powerbi/theme/dubai-market.json`.
+## Change the report or model
 
-## 4. Build the pages
+- **Pages and visuals:** edit in Power BI Desktop and save; the `.Report` folder changes.
+- **Measures and columns:** edit in Desktop, or edit the `.tmdl` files with Desktop closed (TMDL indents with tabs).
+- **Always run the tests** (`make test-fast`). They check that every DAX reference resolves and every relationship joins existing columns; CI also checks every model column against what gold produces.
+- **Rename columns in the report, not the model.** Renaming a model column (double-clicking it in the *Data* pane) breaks the link with gold and fails CI. To change a label, rename the field in the visual's *Fields* box instead.
 
-Follow [docs/dashboard.md](../docs/dashboard.md): four pages, the slicers, and the Arabic tooltip. Use the measures, not raw columns, for every number. Medians cannot be summed, and the measures apply the same outlier and sample-size rules as gold.
+## Publish
 
-## 5. Export and commit
+Once real data is loaded:
 
 1. **File → Export → Export to PDF** → `powerbi/DubaiPropertyMarket.pdf`.
 2. Screenshot each page into `docs/img/dashboard-<page>.png` for the README.
-3. Save, then commit the `.pbip` file and both `DubaiPropertyMarket.*` folders. `.gitignore` already excludes the local cache and per-user settings, so no data or credentials are committed.
-4. Write the three insights in `docs/dashboard.md`.
+3. Write the three insights in `docs/dashboard.md`.
 
-Once the pages exist, the copy in `model/definition/` can be deleted: the project's own `SemanticModel` folder becomes the source of truth.
+`.gitignore` keeps Power BI's data cache (`.pbi/cache.abf`) and per-user settings out of the repo, so no data or credentials are committed.

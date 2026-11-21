@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "DubaiPropertyMarket"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "30a2d745-93b9-4706-b7bd-8af24799292e"
+  }
+}

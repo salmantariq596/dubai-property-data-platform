@@ -1,0 +1,78 @@
+table dim_area
+	lineageTag: c66ae2a0-7615-453c-9758-2ab319cf61c2
+
+	measure 'Area (Arabic)' = SELECTEDVALUE ( dim_area[current_area_name_ar] )
+		displayFolder: Tooltips
+		lineageTag: f1f384fb-6bfb-4b87-91fe-1582489d295b
+
+	column area_sk
+		dataType: int64
+		isHidden
+		lineageTag: 77fad8e8-8ebf-4091-ba47-9dea9bc120bd
+		summarizeBy: none
+		sourceColumn: area_sk
+
+	column area_key
+		dataType: string
+		isHidden
+		lineageTag: 99b43d01-ff97-48a9-bf89-493fd6451b7a
+		summarizeBy: none
+		sourceColumn: area_key
+
+	column area_name_en
+		dataType: string
+		lineageTag: 3208195d-a1c5-406a-a449-857b22d9cec1
+		summarizeBy: none
+		sourceColumn: area_name_en
+
+	column area_name_ar
+		dataType: string
+		lineageTag: 247c84a1-7f67-4dda-adfd-ae1439ee6bc1
+		summarizeBy: none
+		sourceColumn: area_name_ar
+
+	column attr_hash
+		dataType: string
+		isHidden
+		lineageTag: 89694071-fe1b-42e1-ab6b-1b5735e33516
+		summarizeBy: none
+		sourceColumn: attr_hash
+
+	column valid_from
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: a3bcb6c1-6ad3-4f19-87f5-4c2d3cf87258
+		summarizeBy: none
+		sourceColumn: valid_from
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column valid_to
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: b26c8b02-8b8c-4394-9dd4-bfd04987d900
+		summarizeBy: none
+		sourceColumn: valid_to
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column is_current
+		dataType: boolean
+		lineageTag: 1f4950f2-2a6e-457c-b076-664147a19e7a
+		summarizeBy: none
+		sourceColumn: is_current
+
+	column current_area_name_en = CALCULATE ( MAX ( dim_area[area_name_en] ), ALLEXCEPT ( dim_area, dim_area[area_key] ), dim_area[is_current] = TRUE () )
+		dataType: string
+		lineageTag: abf34871-cde2-45d3-adbf-2c580ee43c33
+		summarizeBy: none
+
+	column current_area_name_ar = CALCULATE ( MAX ( dim_area[area_name_ar] ), ALLEXCEPT ( dim_area, dim_area[area_key] ), dim_area[is_current] = TRUE () )
+		dataType: string
+		lineageTag: 3e97596e-26ea-4b05-82a0-89ebc59566df
+		summarizeBy: none
+
+	partition dim_area = m
+		mode: import
+		source = GoldTable("dim_area")
+

@@ -1,0 +1,92 @@
+table dim_date
+	lineageTag: 992661ad-47c8-402e-b8f7-0f54722e9531
+	dataCategory: Time
+
+	column date_key
+		dataType: int64
+		isHidden
+		lineageTag: d62eb652-2e38-4fa8-819c-5cd45754a0e8
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column date
+		dataType: dateTime
+		isKey
+		formatString: yyyy-mm-dd
+		lineageTag: 1a388ba4-1f59-435c-a419-b0a05ba65305
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column year
+		dataType: int64
+		lineageTag: 50651d8c-431a-47a7-b06d-b91163d983e7
+		summarizeBy: none
+		sourceColumn: year
+
+	column quarter
+		dataType: int64
+		lineageTag: 6bd51cc2-02ee-48df-93a2-dc2cb8d51b75
+		summarizeBy: none
+		sourceColumn: quarter
+
+	column month
+		dataType: int64
+		lineageTag: 6d3ead02-7259-4708-9887-679a0618edcd
+		summarizeBy: none
+		sourceColumn: month
+
+	column month_name
+		dataType: string
+		lineageTag: 02c72adc-20bc-45d1-8461-8ff73745fd0c
+		summarizeBy: none
+		sourceColumn: month_name
+		sortByColumn: month
+
+	column month_key
+		dataType: int64
+		isHidden
+		lineageTag: b7b96142-e87d-4a8f-96e7-d6c9c90ce623
+		summarizeBy: none
+		sourceColumn: month_key
+
+	column month_start
+		dataType: dateTime
+		formatString: mmm yyyy
+		lineageTag: 7b384a1b-e545-4cb3-b9d8-a6ccd1de24a8
+		summarizeBy: none
+		sourceColumn: month_start
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column day_of_month
+		dataType: int64
+		lineageTag: 2b75cb06-c16e-4b58-8136-7242d1b6cd62
+		summarizeBy: none
+		sourceColumn: day_of_month
+
+	column iso_weekday
+		dataType: int64
+		isHidden
+		lineageTag: ac72d741-4fcd-4efc-a943-bd0451046167
+		summarizeBy: none
+		sourceColumn: iso_weekday
+
+	column day_name
+		dataType: string
+		lineageTag: 0e205d1f-c41d-4b76-8f0e-78ed9457fd22
+		summarizeBy: none
+		sourceColumn: day_name
+		sortByColumn: iso_weekday
+
+	column is_weekend
+		dataType: boolean
+		lineageTag: 9aeb9bbe-4be2-46bf-af5f-8b8c31d9c979
+		summarizeBy: none
+		sourceColumn: is_weekend
+
+	partition dim_date = m
+		mode: import
+		source = GoldTable("dim_date")
+

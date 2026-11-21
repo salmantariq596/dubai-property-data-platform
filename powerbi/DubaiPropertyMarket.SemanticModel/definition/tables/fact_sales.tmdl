@@ -1,0 +1,201 @@
+table fact_sales
+	lineageTag: 392421ad-537f-4d0d-95b3-c05e5deb8281
+
+	measure Sales = COUNTROWS ( fact_sales )
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: 40c8571b-68fd-43dd-8736-5af28317473a
+
+	measure 'Sales Value AED' = SUM ( fact_sales[value_aed] )
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: d3868c98-0a92-45dd-8bdd-210d0fff669e
+
+	measure 'Sales Value USD' = SUM ( fact_sales[value_usd] )
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: 0dfc01bc-8585-4895-9fdc-81c4d55d332d
+
+	measure 'Priced Sales' = CALCULATE ( COUNTROWS ( fact_sales ), fact_sales[is_outlier] = FALSE (), NOT ISBLANK ( fact_sales[price_per_sqft] ) )
+		formatString: #,0
+		displayFolder: Sales
+		lineageTag: 9778badb-e658-4261-b212-2af59025dda6
+
+	measure 'Median Price per Sqft' = CALCULATE ( MEDIAN ( fact_sales[price_per_sqft] ), fact_sales[is_outlier] = FALSE () )
+		formatString: #,0
+		displayFolder: Prices
+		lineageTag: 2d0e2d01-bec0-4b9c-b307-1c80aa8ca264
+
+	measure 'Median Sale Price AED' = CALCULATE ( MEDIAN ( fact_sales[value_aed] ), fact_sales[is_outlier] = FALSE () )
+		formatString: #,0
+		displayFolder: Prices
+		lineageTag: 28fafbc1-d7b2-4934-9677-4b588d4141b6
+
+	measure 'Median Price per Sqft LY' = CALCULATE ( [Median Price per Sqft], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+		formatString: #,0
+		displayFolder: Prices
+		lineageTag: a6146c95-3d35-4983-8fb9-587de4500b39
+
+	measure 'Median Price per Sqft YoY %' = DIVIDE ( [Median Price per Sqft] - [Median Price per Sqft LY], [Median Price per Sqft LY] )
+		formatString: 0.0%
+		displayFolder: Prices
+		lineageTag: 130e0df0-e2b5-454e-9e62-e9ccc4b47ae9
+
+	measure 'Off-plan Sales' = CALCULATE ( [Sales], fact_sales[is_offplan] = TRUE () )
+		formatString: #,0
+		displayFolder: Off-plan
+		lineageTag: 8e018722-e706-469c-80d4-dec54a7846eb
+
+	measure 'Off-plan Share' = DIVIDE ( [Off-plan Sales], [Sales] )
+		formatString: 0.0%
+		displayFolder: Off-plan
+		lineageTag: 44f67e3d-0e63-4e76-b533-fa2d177b05f5
+
+	measure 'Median Price per Sqft Off-plan' = CALCULATE ( [Median Price per Sqft], fact_sales[is_offplan] = TRUE () )
+		formatString: #,0
+		displayFolder: Off-plan
+		lineageTag: 065b5f5c-7bc2-45e3-b07a-dc6d32fbe3fa
+
+	measure 'Median Price per Sqft Ready' = CALCULATE ( [Median Price per Sqft], fact_sales[is_offplan] = FALSE () )
+		formatString: #,0
+		displayFolder: Off-plan
+		lineageTag: 0b770f3f-822c-40c8-baea-33a0186b357d
+
+	measure 'Off-plan Premium %' = DIVIDE ( [Median Price per Sqft Off-plan] - [Median Price per Sqft Ready], [Median Price per Sqft Ready] )
+		formatString: 0.0%
+		displayFolder: Off-plan
+		lineageTag: 86ac523a-3f97-4efc-899a-7815031483d6
+
+	measure 'Price Growth % (50+ sales)' = IF ( [Priced Sales] >= 50, [Median Price per Sqft YoY %] )
+		formatString: 0.0%
+		displayFolder: Prices
+		lineageTag: 03bba78b-fb18-4307-a8a5-1714eba7fa9b
+
+	measure 'Off-plan Premium % (20+ off-plan)' = IF ( [Off-plan Sales] >= 20, [Off-plan Premium %] )
+		formatString: 0.0%
+		displayFolder: Off-plan
+		lineageTag: 2212c5aa-1659-4194-b56a-bfe0651935a1
+
+	column transaction_id
+		dataType: string
+		lineageTag: 4301fec9-b092-4393-ad28-ab8befc338a3
+		summarizeBy: none
+		sourceColumn: transaction_id
+
+	column date_key
+		dataType: int64
+		isHidden
+		lineageTag: 8e84a49d-7f43-4a2e-9088-641b6093cd8e
+		summarizeBy: none
+		sourceColumn: date_key
+
+	column area_sk
+		dataType: int64
+		isHidden
+		lineageTag: 89980344-2112-4318-9814-54f0779542b1
+		summarizeBy: none
+		sourceColumn: area_sk
+
+	column property_type_sk
+		dataType: int64
+		isHidden
+		lineageTag: 31ba8397-c9f9-4ef4-8b9b-114bc7df4858
+		summarizeBy: none
+		sourceColumn: property_type_sk
+
+	column project_sk
+		dataType: int64
+		isHidden
+		lineageTag: 675cff50-2e86-4f50-8f0d-1e0a49478f20
+		summarizeBy: none
+		sourceColumn: project_sk
+
+	column area_key
+		dataType: string
+		isHidden
+		lineageTag: fb97b90c-3353-48cf-b273-9cd1ca946132
+		summarizeBy: none
+		sourceColumn: area_key
+
+	column size_sqft
+		dataType: double
+		formatString: #,0
+		lineageTag: 0307362b-38a4-4fb2-b229-96ccf002ee7d
+		summarizeBy: sum
+		sourceColumn: size_sqft
+
+		annotation SummarizationSetBy = Automatic
+
+	column value_aed
+		dataType: double
+		formatString: #,0
+		lineageTag: f2a8f723-e99b-457a-a207-487bcc9ad87f
+		summarizeBy: sum
+		sourceColumn: value_aed
+
+		annotation SummarizationSetBy = Automatic
+
+	column value_usd
+		dataType: double
+		formatString: #,0
+		lineageTag: ed905a7c-626e-4968-9985-5fc510e678b5
+		summarizeBy: sum
+		sourceColumn: value_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	column price_per_sqft
+		dataType: double
+		formatString: #,0
+		lineageTag: 96e914e7-5b03-4b9c-a145-f82cf8fcb5d5
+		summarizeBy: sum
+		sourceColumn: price_per_sqft
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_offplan
+		dataType: boolean
+		lineageTag: c8812123-1b2a-4acf-aea1-769d25e540b6
+		summarizeBy: none
+		sourceColumn: is_offplan
+
+	column is_outlier
+		dataType: boolean
+		lineageTag: cc00cbae-df34-468e-89b5-8214718ac6ee
+		summarizeBy: none
+		sourceColumn: is_outlier
+
+	column bedrooms
+		dataType: int64
+		lineageTag: 80ad2a45-60f5-421c-b64a-ec133bb42694
+		summarizeBy: none
+		sourceColumn: bedrooms
+
+	column procedure_name_en
+		dataType: string
+		lineageTag: 0d0a83c9-9a67-4ce5-ac35-e513a25c3213
+		summarizeBy: none
+		sourceColumn: procedure_name_en
+
+	column property_usage_en
+		dataType: string
+		lineageTag: 79ed6a02-491d-46e8-9164-a75de77cc741
+		summarizeBy: none
+		sourceColumn: property_usage_en
+
+	column _load_id
+		dataType: string
+		isHidden
+		lineageTag: 19282ae6-6915-4662-ade2-c468c3f33697
+		summarizeBy: none
+		sourceColumn: _load_id
+
+	column Registration = IF ( fact_sales[is_offplan], "Off-plan", "Ready" )
+		dataType: string
+		lineageTag: c92a6e8b-6772-40d9-b5f8-489e0326c949
+		summarizeBy: none
+
+	partition fact_sales = m
+		mode: import
+		source = GoldTable("fact_sales")
+

@@ -1,0 +1,44 @@
+relationship fact_sales_date_key_dim_date
+	fromColumn: fact_sales.date_key
+	toColumn: dim_date.date_key
+
+relationship fact_sales_area_sk_dim_area
+	fromColumn: fact_sales.area_sk
+	toColumn: dim_area.area_sk
+
+relationship fact_sales_property_type_sk_dim_property_type
+	fromColumn: fact_sales.property_type_sk
+	toColumn: dim_property_type.property_type_sk
+
+relationship fact_sales_project_sk_dim_project
+	fromColumn: fact_sales.project_sk
+	toColumn: dim_project.project_sk
+
+relationship fact_rents_date_key_dim_date
+	fromColumn: fact_rents.date_key
+	toColumn: dim_date.date_key
+
+relationship fact_rents_area_sk_dim_area
+	fromColumn: fact_rents.area_sk
+	toColumn: dim_area.area_sk
+
+relationship fact_rents_property_type_sk_dim_property_type
+	fromColumn: fact_rents.property_type_sk
+	toColumn: dim_property_type.property_type_sk
+
+relationship fact_rents_project_sk_dim_project
+	fromColumn: fact_rents.project_sk
+	toColumn: dim_project.project_sk
+
+relationship agg_area_monthly_month_start_dim_date
+	fromColumn: agg_area_monthly.month_start
+	toColumn: dim_date.date
+
+relationship agg_area_monthly_area_sk_dim_area
+	fromColumn: agg_area_monthly.area_sk
+	toColumn: dim_area.area_sk
+
+relationship agg_area_monthly_property_type_sk_dim_property_type
+	fromColumn: agg_area_monthly.property_type_sk
+	toColumn: dim_property_type.property_type_sk
+
