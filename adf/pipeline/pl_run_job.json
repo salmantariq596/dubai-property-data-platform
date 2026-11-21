@@ -1,0 +1,264 @@
+{
+  "name": "pl_run_job",
+  "properties": {
+    "description": "Start the Databricks job (bronze, checks, silver, checks, gold, checks), wait for it, alert if it fails.",
+    "parameters": {
+      "load_id": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "datasets": {
+        "type": "String",
+        "defaultValue": "transactions,rents"
+      },
+      "catalog": {
+        "type": "String",
+        "defaultValue": "dubai"
+      },
+      "databricks_host": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "databricks_job_id": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "alert_webhook_url": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "activities": [
+      {
+        "name": "Start job",
+        "type": "WebActivity",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.00:10:00",
+          "retry": 3,
+          "retryIntervalInSeconds": 60
+        },
+        "typeProperties": {
+          "method": "POST",
+          "url": {
+            "value": "https://@{pipeline().parameters.databricks_host}/api/2.1/jobs/run-now",
+            "type": "Expression"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "authentication": {
+            "type": "MSI",
+            "resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+          },
+          "body": {
+            "value": "{\"job_id\": @{pipeline().parameters.databricks_job_id}, \"job_parameters\": {\"load_id\": \"@{pipeline().parameters.load_id}\", \"catalog\": \"@{pipeline().parameters.catalog}\", \"datasets\": \"@{pipeline().parameters.datasets}\"}}",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "Remember run id",
+        "type": "SetVariable",
+        "dependsOn": [
+          {
+            "activity": "Start job",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "variableName": "run_id",
+          "value": {
+            "value": "@string(activity('Start job').output.run_id)",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "Wait for the job",
+        "type": "Until",
+        "dependsOn": [
+          {
+            "activity": "Remember run id",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "value": "@contains(createArray('TERMINATED', 'SKIPPED', 'INTERNAL_ERROR'), variables('life_cycle'))",
+            "type": "Expression"
+          },
+          "timeout": "0.06:00:00",
+          "activities": [
+            {
+              "name": "Wait a minute",
+              "type": "Wait",
+              "dependsOn": [],
+              "typeProperties": {
+                "waitTimeInSeconds": 60
+              }
+            },
+            {
+              "name": "Get run state",
+              "type": "WebActivity",
+              "dependsOn": [
+                {
+                  "activity": "Wait a minute",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "policy": {
+                "timeout": "0.00:10:00",
+                "retry": 3,
+                "retryIntervalInSeconds": 60
+              },
+              "typeProperties": {
+                "method": "GET",
+                "url": {
+                  "value": "https://@{pipeline().parameters.databricks_host}/api/2.1/jobs/runs/get?run_id=@{variables('run_id')}",
+                  "type": "Expression"
+                },
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "authentication": {
+                  "type": "MSI",
+                  "resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+                }
+              }
+            },
+            {
+              "name": "Remember life cycle",
+              "type": "SetVariable",
+              "dependsOn": [
+                {
+                  "activity": "Get run state",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "typeProperties": {
+                "variableName": "life_cycle",
+                "value": {
+                  "value": "@activity('Get run state').output.state.life_cycle_state",
+                  "type": "Expression"
+                }
+              }
+            },
+            {
+              "name": "Remember result",
+              "type": "SetVariable",
+              "dependsOn": [
+                {
+                  "activity": "Get run state",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "typeProperties": {
+                "variableName": "result_state",
+                "value": {
+                  "value": "@coalesce(activity('Get run state').output.state.result_state, '')",
+                  "type": "Expression"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Job succeeded",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "Wait for the job",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "value": "@equals(variables('result_state'), 'SUCCESS')",
+            "type": "Expression"
+          },
+          "ifFalseActivities": [
+            {
+              "name": "Alert job failed",
+              "type": "ExecutePipeline",
+              "dependsOn": [],
+              "typeProperties": {
+                "pipeline": {
+                  "referenceName": "pl_alert",
+                  "type": "PipelineReference"
+                },
+                "waitOnCompletion": true,
+                "parameters": {
+                  "message": {
+                    "value": "@concat('Databricks job run ', variables('run_id'), ' ended ', variables('life_cycle'), ' / ', variables('result_state'), ' (load ', pipeline().parameters.load_id, ')')",
+                    "type": "Expression"
+                  },
+                  "alert_webhook_url": {
+                    "value": "@pipeline().parameters.alert_webhook_url",
+                    "type": "Expression"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "Alert job did not start",
+        "type": "ExecutePipeline",
+        "dependsOn": [
+          {
+            "activity": "Start job",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "pl_alert",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true,
+          "parameters": {
+            "message": {
+              "value": "@concat('Could not start the Databricks job (load ', pipeline().parameters.load_id, ')')",
+              "type": "Expression"
+            },
+            "alert_webhook_url": {
+              "value": "@pipeline().parameters.alert_webhook_url",
+              "type": "Expression"
+            }
+          }
+        }
+      }
+    ],
+    "variables": {
+      "run_id": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "life_cycle": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "result_state": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    }
+  }
+}

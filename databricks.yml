@@ -1,0 +1,59 @@
+# Databricks Asset Bundle: the scheduled job lives in the repo, deployed with
+#   databricks bundle deploy -t <target>
+# See docs/orchestration.md.
+
+bundle:
+  name: dubai-property-data-platform
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog the pipeline writes to.
+    default: dubai
+  alert_email:
+    description: Who is emailed when the job fails.
+    default: alerts@example.com
+
+targets:
+  # Databricks Free Edition, or any workspace with serverless jobs:
+  # tasks run on serverless compute, no cluster to manage.
+  dev:
+    mode: development
+    default: true
+
+  # Azure Databricks from infra/: tasks share one small single-node job cluster.
+  # Set DATABRICKS_HOST to the workspace URL (terraform output databricks_workspace_url).
+  azure:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    resources:
+      jobs:
+        daily_pipeline:
+          job_clusters:
+            - job_cluster_key: pipeline
+              new_cluster:
+                spark_version: 16.4.x-scala2.12
+                node_type_id: Standard_D4ds_v5
+                num_workers: 0
+                data_security_mode: SINGLE_USER
+                spark_conf:
+                  spark.master: "local[*, 4]"
+                  spark.databricks.cluster.profile: singleNode
+                custom_tags:
+                  ResourceClass: SingleNode
+          tasks:
+            - task_key: bronze
+              job_cluster_key: pipeline
+            - task_key: quality_bronze
+              job_cluster_key: pipeline
+            - task_key: silver
+              job_cluster_key: pipeline
+            - task_key: quality_silver
+              job_cluster_key: pipeline
+            - task_key: gold
+              job_cluster_key: pipeline
+            - task_key: quality_gold
+              job_cluster_key: pipeline

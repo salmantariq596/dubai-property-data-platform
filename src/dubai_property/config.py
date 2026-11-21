@@ -193,6 +193,11 @@ class QualitySettings:
     def dq_results_table(self) -> str:
         return f"{self.catalog}.{self.quality_schema}.dq_results"
 
+    @property
+    def pipeline_runs_table(self) -> str:
+        """One row per job step per run: SUCCESS, or FAILED with the error."""
+        return f"{self.catalog}.{self.quality_schema}.pipeline_runs"
+
     def tables(self) -> dict[str, str]:
         """Placeholder -> table name, for the SQL of the checks: ``{silver_transactions}``."""
         layers = {

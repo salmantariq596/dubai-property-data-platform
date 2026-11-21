@@ -2,6 +2,29 @@
 
 Each module is merged with a pull request and tagged.
 
+## [Unreleased] — Module 8: Orchestration with Data Factory (code ready, deployment pending)
+
+### Added
+- Databricks Asset Bundle (`databricks.yml`, `resources/jobs.yml`): job `dpdp-daily-pipeline` with six chained tasks (bronze → quality_bronze → silver → quality_silver → gold → quality_gold), one concurrent run, 4-hour timeout, email on failure. Targets `dev` (serverless, works on Free Edition) and `azure` (one shared single-node job cluster).
+- `notebooks/08_job_step.py` and `orchestrate.run_step`: every step writes SUCCESS (with a summary) or FAILED (with the error) to `quality.pipeline_runs`, then re-raises so the job stops.
+- Data Factory pipelines (`adf/pipeline/`):
+  - `pl_ingest_dataset` (copy one file to `raw/landing`) and `pl_land_day`;
+  - `pl_run_job`: start the job with the factory's managed identity, poll, alert on failure;
+  - `pl_alert`: webhook, then Fail;
+  - `pl_daily`, and `pl_backfill`, which lands a date range then runs the job once.
+- `infra/orchestration` Terraform stack: linked services (lake via managed identity, DLD source over HTTP), binary datasets, the pipelines in dependency order, and the daily 02:00 Dubai trigger (deployed off).
+- 39 unit tests:
+  - every pipeline, parameter, variable, activity and dataset reference resolves;
+  - pipelines are created after the pipelines they call;
+  - Databricks is called with the managed identity;
+  - every failure path alerts and fails;
+  - the job's tasks match the Python step order.
+- 5 Spark tests for step logging. CI validates the new Terraform stack.
+- ADR 0008, `docs/orchestration.md` (deploy, run, backfill, failure handling, re-running after a failure), `adf/README.md`.
+
+### To do before v0.8.0
+- Confirm the DLD download paths; deploy the bundle and the stack; run `pl_daily` by hand, then a backfill; switch on the schedule; record durations and cost; screenshot the run history.
+
 ## [Unreleased] — Module 7: Azure infrastructure with Terraform (code ready, apply pending)
 
 ### Added

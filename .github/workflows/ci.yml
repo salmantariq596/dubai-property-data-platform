@@ -58,7 +58,7 @@ jobs:
 
       - name: Validate
         run: |
-          for stack in bootstrap platform unity-catalog; do
+          for stack in bootstrap platform unity-catalog orchestration; do
             terraform -chdir=infra/$stack init -backend=false -input=false
             terraform -chdir=infra/$stack validate
           done
@@ -85,6 +85,7 @@ jobs:
             tests: >-
               tests/spark/test_gold_pipeline.py
               tests/spark/test_quality_checks.py
+              tests/spark/test_job_steps.py
               tests/integration
     env:
       # Fail (don't skip) if Delta Lake can't start, so the Delta-only tests

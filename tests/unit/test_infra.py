@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 INFRA = Path(__file__).parents[2] / "infra"
-STACKS = ["bootstrap", "platform", "unity-catalog"]
+STACKS = ["bootstrap", "platform", "unity-catalog", "orchestration"]
 
 
 def tf(stack: str) -> str:
@@ -74,7 +74,7 @@ def test_budget_alert_comes_first():
     assert blocks(tf("bootstrap"), "azurerm_consumption_budget_subscription")
 
 
-@pytest.mark.parametrize("stack", ["platform", "unity-catalog"])
+@pytest.mark.parametrize("stack", ["platform", "unity-catalog", "orchestration"])
 def test_state_lives_in_the_remote_backend(stack):
     assert 'backend "azurerm" {}' in tf(stack)
     example = (INFRA / stack / "backend.example.hcl").read_text(encoding="utf-8")

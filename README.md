@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 7 of 10 — Azure infrastructure with Terraform (code ready; deployment next).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 8 of 10 — orchestration with Data Factory (code ready; deployment next).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -136,6 +136,18 @@ flowchart LR
 
 How to deploy, rebuild and keep costs down: [infra/](infra/README.md). Design reasoning: [ADR 0007](docs/adr/0007-azure-infrastructure.md).
 
+## Orchestration: a daily run nobody has to start
+
+Every day at 02:00 Dubai time, Data Factory lands the new DLD files in the lake, then starts one Databricks job: bronze → checks → silver → checks → gold → checks.
+
+- **Defined in the repo:** the job is a Databricks Asset Bundle; the Data Factory pipelines are JSON deployed by Terraform, and tests check every reference in them.
+- **Every step logs itself** to `quality.pipeline_runs`: SUCCESS with a summary, or FAILED with the error.
+- **Failures alert:** an email from Databricks and an optional Teams or Slack webhook from Data Factory.
+- **No secrets:** Data Factory calls Databricks and the lake with its managed identity.
+- **Backfill in one job run:** `pl_backfill` lands a date range day by day, then runs the job once. The pipeline is incremental, so three years of history is one run.
+
+How to deploy, run, backfill and recover: [orchestration](docs/orchestration.md). Design reasoning: [ADR 0008](docs/adr/0008-orchestration.md).
+
 ## Repository layout
 
 ```
@@ -150,8 +162,9 @@ How to deploy, rebuild and keep costs down: [infra/](infra/README.md). Design re
 │   ├── utils/
 ├── notebooks/            # thin notebooks that call src/
 ├── tests/                # unit/, spark/, integration/, fixtures/
-├── infra/                # Terraform: bootstrap, platform, unity-catalog
-├── adf/                  # exported Data Factory pipelines
+├── infra/                # Terraform: bootstrap, platform, unity-catalog, orchestration
+├── databricks.yml        # Databricks Asset Bundle: the scheduled job (resources/jobs.yml)
+├── adf/                  # Data Factory pipelines (JSON), deployed by infra/orchestration
 ├── powerbi/              # semantic model (TMDL), theme, report and PDF export
 └── docs/                 # data sources, dictionary, decisions, profiles
 ```
@@ -196,7 +209,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 5 | Data quality framework and integration tests | ✅ v0.5 |
 | 6 | Power BI dashboard (minimum complete version) | 🔧 report built; real data, PDF and insights to come |
 | 7 | Azure infrastructure with Terraform | 🔧 code ready, apply pending |
-| 8 | Data Factory orchestration, Asset Bundles | ⏳ |
+| 8 | Data Factory orchestration, Asset Bundles | 🔧 code ready, deployment pending |
 | 9 | CI/CD deploy, monitoring, runbook, cost | ⏳ |
 | 10 | Demo video and final write-up | ⏳ |
 
@@ -211,6 +224,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 - [0005 — Data quality: checks between layers, dq_results, fail before the next layer](docs/adr/0005-data-quality.md)
 - [0006 — Power BI model as code: import mode over gold, measures in DAX](docs/adr/0006-power-bi-model.md)
 - [0007 — Azure infrastructure: three Terraform stacks, identities instead of keys](docs/adr/0007-azure-infrastructure.md)
+- [0008 — Orchestration: Data Factory lands files and starts one Databricks job](docs/adr/0008-orchestration.md)
 
 ## License
 
