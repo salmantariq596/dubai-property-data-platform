@@ -2,6 +2,20 @@
 
 Each module is merged with a pull request and tagged.
 
+## [Unreleased] — Module 10: Documentation and launch
+
+### Changed
+- `README.md` rewritten as the project's front page: the question it answers, demo, architecture, key numbers, tech stack with reasons, data model, a design-decisions table linking every ADR, data quality, cost, how to run it (locally, on Free Edition, on Azure), lessons learned and next steps. Figures that need the real-data run are shown as `_` until measured.
+- The per-layer sections moved from the README to `docs/architecture.md`.
+- CI: `test_job_steps.py` moved from the `pipelines` Spark group (8.7 min) to `bronze-silver` (4.5 min) to shorten the slowest job.
+
+### Added
+- `docs/design_qa.md`: short answers to the design questions a reviewer is likely to ask, each linked to its ADR.
+- `tests/unit/test_docs.py`: every relative link in every Markdown file resolves, and every ADR is linked from the README (32 tests).
+
+### To do before v1.0.0
+- Fill the `_` figures, screenshots and three insights from the full-history run; record the demo video.
+
 ## [Unreleased] — Module 9: CI/CD, monitoring and cost (code ready, setup pending)
 
 ### Added

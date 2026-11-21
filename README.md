@@ -2,239 +2,226 @@
 
 [![CI](https://github.com/salmantariq596/dubai-property-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/salmantariq596/dubai-property-data-platform/actions/workflows/ci.yml)
 
-An Azure lakehouse that turns official Dubai Land Department (DLD) sales and rental records into a market dashboard.
+**An Azure lakehouse that turns official Dubai Land Department (DLD) sales and rental records into a market dashboard, refreshed daily, tested end to end, and built entirely from code.**
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 9 of 10 — CI/CD, monitoring and cost (code ready; deployment next).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> **Status:** all ten modules are built, tested and merged. The platform is being deployed to Azure and run on the full DLD history. Figures shown as `_` are filled in from that run, never estimated.
+
+## Demo
+
+| | |
+|---|---|
+| 🎥 3-minute demo | _link after the first production run_ |
+| 📊 Dashboard | 4 pages: Market overview · Area deep-dive · Off-plan vs ready · Rental yield ([design](docs/dashboard.md)) |
+| 📄 PDF export | `powerbi/DubaiPropertyMarket.pdf` (after the real-data run) |
+
+*Screenshots go here after the real-data run. Until then the report runs on synthetic sample data, which is never published.*
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    A[DLD open data<br/>sales · rents · projects] -->|daily copy| B[Azure Data Factory]
-    B --> C[(ADLS Gen2<br/>raw/)]
-    subgraph DBX [Azure Databricks · Delta Lake · Unity Catalog]
-        D[Bronze<br/>raw strings, load log] --> E[Silver<br/>typed, deduped, MERGE<br/>quarantine]
-        E --> F[Gold<br/>star schema, SCD2<br/>monthly aggregates]
+    A[DLD open data<br/>sales · rents] -->|daily 02:00, managed identity| B[Azure Data Factory]
+    B --> C[(ADLS Gen2<br/>raw/landing)]
+    subgraph DBX [Azure Databricks · Delta Lake · Unity Catalog · one scheduled job]
+        D[Bronze<br/>raw strings, load log] --> QB{{checks}} --> E[Silver<br/>typed, deduplicated, MERGE<br/>quarantine]
+        E --> QS{{checks}} --> F[Gold<br/>star schema, SCD Type 2<br/>monthly aggregates]
+        F --> QG{{checks}}
     end
     C --> D
     F --> G[Power BI<br/>market dashboard]
+    H[GitHub Actions<br/>OIDC, no secrets] -.deploys.-> DBX
+    T[Terraform] -.builds.-> B & C & DBX
 ```
 
-Data quality checks run between every layer. Terraform builds the infrastructure, Key Vault holds secrets, and GitHub Actions tests and deploys the code.
+A failed check stops the run before the next layer, so the dashboard keeps the last good data. Every service reaches the lake and Databricks through a managed identity: there are no keys, passwords or tokens anywhere. How each layer works: [architecture](docs/architecture.md).
+
+## In numbers
+
+| | |
+|---|---|
+| Records processed | _ million sales and rental records |
+| Years covered | _ |
+| Full-history run | _ minutes, one job run |
+| Daily run | _ minutes, about _ USD |
+| Query time after `OPTIMIZE` + liquid clustering | _ % faster ([performance](docs/performance.md)) |
+| Tests | 402: 317 unit, 85 Spark and integration, 98% coverage, all in CI |
+| Data quality checks | 25 between the layers, every result recorded |
+| Infrastructure | 5 Terraform stacks, 0 secrets |
 
 ## Tech stack
 
-| Layer | Tool | Why |
+| Layer | Tool | Why this tool |
 |---|---|---|
-| Storage | Azure Data Lake Storage Gen2 | Standard Azure lake storage |
-| Ingestion and scheduling | Azure Data Factory | Most-listed orchestration tool in Gulf data roles |
-| Processing | Azure Databricks, PySpark | Distributed processing of 11M+ records |
-| Table format | Delta Lake | ACID, MERGE, schema enforcement, time travel |
-| Governance | Unity Catalog | Catalogs, permissions, lineage |
-| Data quality | Custom rules + `dq_results` table | Bad data is quarantined or blocks the run |
-| BI | Power BI | Dominant BI tool in the region |
-| Infrastructure as code | Terraform | Whole platform rebuildable from code |
-| CI/CD | GitHub Actions, Databricks Asset Bundles | Tested, automated deploys |
+| Storage | Azure Data Lake Storage Gen2 | Hierarchical namespace for `abfss://` paths, one container per medallion layer |
+| Ingestion and scheduling | Azure Data Factory | Moves files from a web source on a schedule with retries; the most-listed orchestrator in Gulf data roles |
+| Processing | Azure Databricks, PySpark | Scales from one year of data to the full DLD history without code changes |
+| Table format | Delta Lake | ACID writes, MERGE for idempotent loads, time travel to recover, OPTIMIZE and liquid clustering |
+| Governance | Unity Catalog | Catalog, schemas and volumes, with storage reached through a managed identity |
+| Data quality | Own framework: SQL checks + `dq_results` | 25 rules readable in one file; quarantine, warn or fail per rule |
+| BI | Power BI (model as TMDL code) | The region's dominant BI tool; the model is reviewed and tested like code |
+| Infrastructure as code | Terraform | The whole platform rebuilt from scratch with a few `apply`s |
+| CI/CD | GitHub Actions, Databricks Asset Bundles, OIDC | Every change tested; merges deploy themselves without stored secrets |
 
-## Bronze: load every file exactly once
+## Data model
 
-```mermaid
-flowchart LR
-    L["landing volume<br/>dataset/load_date=…/*.csv"] --> AL["Auto Loader<br/>all strings · availableNow"]
-    AL --> M["+ _ingested_at, _source_file,<br/>_load_id, _load_date"]
-    M --> FB["foreachBatch<br/>idempotent append<br/>(txnAppId + batch id)"]
-    FB --> B[("bronze.dld_*_raw<br/>append-only Delta")]
-    FB --> LL[("bronze.load_log<br/>per-file counts, status")]
-```
+A Kimball star: two facts sharing conformed dimensions, plus one monthly aggregate for the medians and yields that DAX cannot sum. Full diagram, grains and measures: [gold model](docs/gold_model.md).
 
-- **Re-runs are safe.** Auto Loader's checkpoint skips files already loaded, and idempotent writes cover a crash between writing and checkpointing.
-- **Nothing is changed or lost.** Every column stays a string, `delta.appendOnly` blocks deletes and updates, and malformed values go to `_rescued_data`.
-- **Every run is accounted for.** Each file is counted back after writing; empty and failed runs are logged too.
+| Table | Grain |
+|---|---|
+| `fact_sales` | One registered sale (mortgages and gifts excluded) |
+| `fact_rents` | One Ejari rental contract |
+| `dim_area` | One version of one area (SCD Type 2: renames keep history) |
+| `dim_date`, `dim_property_type`, `dim_project` | One day / type and sub-type / project |
+| `agg_area_monthly` | One area × property type × month, plus an "All types" row |
 
-Design reasoning: [ADR 0002](docs/adr/0002-bronze-ingestion-design.md). Operations: [bronze runbook](docs/runbook_bronze.md).
+## Design decisions and trade-offs
 
-## Silver: typed, trustworthy, one row per key
+Each decision has a record in [docs/adr/](docs/adr/) with the alternatives considered.
 
-```mermaid
-flowchart LR
-    B[("bronze.dld_*_raw<br/>new load ids only")] --> C["cast with explicit formats<br/>check rules"]
-    C -->|breaks a rule| Q[("silver.quarantine<br/>rules broken + raw row")]
-    C -->|passes| D["dedup on business key<br/>latest ingested wins"]
-    D --> E["derive sqft, price/sqft, USD,<br/>off-plan, annual rent<br/>flag outliers · map areas"]
-    E -->|MERGE on key| S[("silver.transactions<br/>silver.rents")]
-    S --> A[("silver.areas")]
-```
+| Decision | Instead of | Why | ADR |
+|---|---|---|---|
+| Build and test locally and on Databricks Free Edition first | Developing on Azure from day one | Fast feedback at no cost; Azure only once the code is proven | [0001](docs/adr/0001-local-first-development.md) |
+| Auto Loader with idempotent `foreachBatch` writes | ADF copying straight into tables | File tracking, schema evolution and replay-safe writes inside the lakehouse; ADF only moves files | [0002](docs/adr/0002-bronze-ingestion-design.md) |
+| Every bronze column a string | Inferring types on read | Casting is a business decision made in silver, where failures are quarantined instead of lost | [0002](docs/adr/0002-bronze-ingestion-design.md) |
+| Quarantine bad rows; fail only when the next layer would be wrong | Failing the run on any bad row | One bad row must not block a million good ones; a mostly bad load must | [0003](docs/adr/0003-silver-cleaning-design.md), [0005](docs/adr/0005-data-quality.md) |
+| MERGE on the business key, latest ingested wins | Overwrite or append | Re-runs and replays change nothing; older data never overwrites newer | [0003](docs/adr/0003-silver-cleaning-design.md) |
+| Hash surrogate keys | Identity columns | Same input, same key: dimensions rebuild without re-keying facts | [0004](docs/adr/0004-gold-star-schema.md) |
+| SCD Type 2 for areas only | Type 2 everywhere | Area names are what changes and what reports need historically; the rest stays Type 1 | [0004](docs/adr/0004-gold-star-schema.md) |
+| Liquid clustering by date | Partitioning by month | Healthy file sizes without choosing a partition column up front | [0004](docs/adr/0004-gold-star-schema.md) |
+| One Databricks job chaining the layers | One ADF activity per layer | One cluster start per run; the whole chain visible in one place | [0008](docs/adr/0008-orchestration.md) |
+| Backfill lands days, then runs the job once | One job run per day of history | Incremental loads make three years one run, not about 1,000 | [0008](docs/adr/0008-orchestration.md) |
+| Managed identities and OIDC everywhere | Keys, personal access tokens, client secrets | Nothing to store, rotate or leak | [0007](docs/adr/0007-azure-infrastructure.md), [0009](docs/adr/0009-cicd-and-monitoring.md) |
+| Power BI model as tested TMDL | A model clicked together in Desktop | Reviewable diffs; CI catches a gold change that would break the report | [0006](docs/adr/0006-power-bi-model.md) |
 
-- **Bad data is kept, not lost.** A row that fails a cast or a rule goes to `silver.quarantine` with the rules it broke and its raw values.
-- **Outliers are flagged, not deleted.** Zero sizes and prices per sqft outside 100–20,000 AED stay in silver with `outlier_reason`.
-- **One area, one name.** English, Arabic and misspelled area names map to one `area_key`; Arabic-only rows get their English name.
-- **Re-runs are safe.** Only new bronze loads are processed, and MERGE on the business key means a repeat changes nothing and old data never overwrites newer data.
+## Data quality
 
-Design reasoning: [ADR 0003](docs/adr/0003-silver-cleaning-design.md). Operations: [silver runbook](docs/runbook_silver.md).
+Three responses, each where it fits:
+- a broken **row** is quarantined in silver with the rule it broke and its raw values;
+- something odd but usable is a **WARN**;
+- anything that would make the next layer wrong is a **FAIL**: the run stops, gold is not rebuilt, and an alert goes out.
 
-## Gold: a star schema for Power BI
+25 checks run between the layers: keys, dates, positive values, quarantine rate, row-count change against the previous load, gold reconciliation with silver, and dimension integrity. Every result is recorded in `quality.dq_results`. Rule catalogue: [data quality](docs/data_quality.md).
 
-```mermaid
-flowchart LR
-    S[("silver.transactions<br/>silver.rents<br/>silver.areas")] --> D["dim_date · dim_area (SCD 2)<br/>dim_property_type · dim_project"]
-    S --> F["fact_sales · fact_rents<br/>surrogate keys from the dims"]
-    D --> F
-    F --> A[("agg_area_monthly<br/>median price/sqft, YoY,<br/>median rent, gross yield")]
-    A --> P[Power BI]
-    F --> P
-```
+## Cost
 
-- **Clear grain.** `fact_sales` is one registered sale, `fact_rents` one Ejari contract; `agg_area_monthly` is one area × property type × month.
-- **History kept.** `dim_area` is SCD Type 2: a sale keeps the area name it had on its date, and the aggregate reports today's name.
-- **No lost rows.** Missing areas, types or projects point at an Unknown row (`-1`).
-- **Yield you can trust.** Gross yield is published only when both medians rest on at least 10 records; outliers and multi-unit contracts are left out of medians.
+| Run | Cost |
+|---|---|
+| Full history | _ |
+| Daily | _ |
+| Month (30 daily runs + storage) | _ |
 
-Model diagram, grains and measures: [gold model](docs/gold_model.md). Design reasoning: [ADR 0004](docs/adr/0004-gold-star-schema.md). Timings: [performance](docs/performance.md).
+Controls built in:
+- a budget alert set up before anything else;
+- one small single-node job cluster shared by all steps;
+- incremental loads;
+- backfill in one job run;
+- schedules deployed off;
+- a timeout and a single run at a time;
+- `terraform destroy` when idle.
 
-## Data quality: bad data stops before the dashboard
+Measured from Databricks system billing and Azure Cost Management: [cost](docs/cost.md).
 
-```mermaid
-flowchart LR
-    B[bronze] --> QB{{bronze checks}} --> S[silver] --> QS{{silver checks}} --> G[gold] --> QG{{gold checks}}
-    QS -->|FAIL| X["run stops:<br/>gold keeps the last good data"]
-    QB & QS & QG --> R[("quality.dq_results")]
-```
+## How to run it
 
-- **The right response for each problem.** A bad row is quarantined in silver. Something odd but usable is a WARN. Anything that would make the next layer wrong is a FAIL and stops the run.
-- **25 checks, each one SQL query** with WARN and FAIL thresholds: keys, dates, positive values, quarantine rate, row-count change against the previous load, gold reconciliation with silver, dimension integrity.
-- **Every result recorded** in `dq_results`, before anything fails: rule, table, rows checked and failed, load id.
-- **Tested end to end.** Integration tests run bronze to gold on both fixtures, and prove that a mostly broken load is stopped at silver with gold untouched.
-
-Rule catalogue and what to do when a check fails: [data quality](docs/data_quality.md). Design reasoning: [ADR 0005](docs/adr/0005-data-quality.md).
-
-## Dashboard
-
-Four pages in Power BI: Market overview, Area deep-dive, Off-plan vs ready, Rental yield. The semantic model is code (TMDL), tested against gold in CI so a gold change cannot silently break the report. One parameter switches between a Databricks SQL warehouse and exported Parquet files.
-
-Page designs: [dashboard](docs/dashboard.md). Setup: [powerbi/](powerbi/README.md). Design reasoning: [ADR 0006](docs/adr/0006-power-bi-model.md). *Screenshots follow once real data is loaded; until then the report runs on synthetic sample data (`tools/make_sample_gold.py`).*
-
-## Infrastructure: Azure from code, no keys
-
-```mermaid
-flowchart LR
-    T[Terraform] --> RG[rg-dpdp-dev]
-    RG --> L[(ADLS Gen2<br/>raw · bronze · silver · gold)]
-    RG --> W[Databricks workspace]
-    RG --> K[Key Vault]
-    RG --> F[Data Factory]
-    AC[Access connector<br/>managed identity] -->|Storage Blob Data Contributor| L
-    W --> UC[Unity Catalog<br/>catalog dubai]
-    UC -->|storage credential| AC
-    F -->|managed identity| L
-```
-
-- **Three stacks:** `bootstrap` (budget alert and state storage), `platform` (Azure resources) and `unity-catalog` (catalog, schemas, volumes), applied in that order.
-- **No keys anywhere.** Storage account keys are disabled; Unity Catalog and Data Factory reach the lake through managed identities with one role each.
-- **Checked on every pull request:** `terraform fmt` and `validate` run in CI, and unit tests fail if a security choice drifts.
-
-How to deploy, rebuild and keep costs down: [infra/](infra/README.md). Design reasoning: [ADR 0007](docs/adr/0007-azure-infrastructure.md).
-
-## Orchestration: a daily run nobody has to start
-
-Every day at 02:00 Dubai time, Data Factory lands the new DLD files in the lake, then starts one Databricks job: bronze → checks → silver → checks → gold → checks.
-
-- **Defined in the repo:** the job is a Databricks Asset Bundle; the Data Factory pipelines are JSON deployed by Terraform, and tests check every reference in them.
-- **Every step logs itself** to `quality.pipeline_runs`: SUCCESS with a summary, or FAILED with the error.
-- **Failures alert:** an email from Databricks and an optional Teams or Slack webhook from Data Factory.
-- **No secrets:** Data Factory calls Databricks and the lake with its managed identity.
-- **Backfill in one job run:** `pl_backfill` lands a date range day by day, then runs the job once. The pipeline is incremental, so three years of history is one run.
-
-How to deploy, run, backfill and recover: [orchestration](docs/orchestration.md). Design reasoning: [ADR 0008](docs/adr/0008-orchestration.md).
-
-## Operations: deploy, watch, recover
-
-- **CI on every pull request:** lint, unit tests, Spark tests in parallel groups, `terraform validate`, `databricks bundle validate`.
-- **Deploy on merge to `main`:** GitHub signs in to Azure with OIDC, so there is no stored secret, and deploys the Databricks bundle through a `production` environment. [How a change reaches production](docs/cicd.md).
-- **Monitoring from the pipeline's own logs:** last run per step, rows per load, failure and quality trends, quarantine rate, job cost from Databricks billing (`notebooks/09_monitoring`).
-- **One health status:** OK / WARN / STALE / FAILED. A daily health check alerts even when the pipeline did not run at all.
-- **When something fails:** [runbook](docs/runbook.md). **What it costs and why it stays low:** [cost](docs/cost.md). Design reasoning: [ADR 0009](docs/adr/0009-cicd-and-monitoring.md).
-
-## Repository layout
-
-```
-├── src/dubai_property/   # all pipeline logic, unit-tested
-│   ├── profiling/        # Module 1: data discovery
-│   ├── bronze/           # Module 2: Auto Loader ingestion, load log
-│   ├── silver/           # Module 3: rules, cleaning, area mapping, MERGE
-│   ├── gold/             # Module 4: star schema, SCD Type 2, monthly aggregate
-│   ├── quality/          # Module 5: checks between layers, dq_results
-│   ├── orchestrate.py    # the whole pipeline in one call
-│   ├── config.py         # datasets, paths, table names
-│   ├── utils/
-├── notebooks/            # thin notebooks that call src/
-├── tests/                # unit/, spark/, integration/, fixtures/
-├── infra/                # Terraform: bootstrap, platform, unity-catalog, orchestration, cicd
-├── databricks.yml        # Databricks Asset Bundle: the scheduled job (resources/jobs.yml)
-├── adf/                  # Data Factory pipelines (JSON), deployed by infra/orchestration
-├── powerbi/              # semantic model (TMDL), theme, report and PDF export
-└── docs/                 # data sources, dictionary, decisions, profiles
-```
-
-## Quick start
+**Locally, in minutes** (Python 3.10+):
 
 ```bash
 git clone https://github.com/salmantariq596/dubai-property-data-platform.git
 cd dubai-property-data-platform
-make setup          # virtualenv, dev dependencies, pre-commit hooks
-make test-fast      # unit tests, no Spark needed
-make setup-spark    # optional: local PySpark + Delta (Java 17+)
-make test           # all tests, including Spark ingestion tests
-make profile-sample # profile the synthetic fixture
+make setup                         # virtualenv, dev dependencies, pre-commit hooks
+make test-fast                     # unit tests, no Spark needed
+python tools/make_sample_gold.py   # synthetic gold tables to open the Power BI report with
 ```
 
-Spark tests run in CI on every pull request. On Windows they are skipped locally (local Spark needs extra setup there); use WSL to run them.
+`make setup-spark && make test` adds the Spark and Delta tests (needs Java 17+; on Windows use WSL). CI runs everything on every pull request.
 
-**On Databricks:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a file to the landing volume, then run `notebooks/06_run_pipeline` (bronze, silver and gold with data quality checks between them). The layer notebooks `02`–`05` run one step each.
+**On Databricks Free Edition:** clone the repo as a Git folder, run `notebooks/00_setup_unity_catalog`, upload a DLD file to the landing volume, and run `notebooks/06_run_pipeline`. Or deploy the job with `databricks bundle deploy` (target `dev`, serverless).
 
-Profile a real DLD download:
+**On Azure, the full platform:**
 
 ```bash
-dld-profile data/raw/transactions/load_date=2026-11-04/transactions.csv \
-    --key transaction_id --output docs/profiles/transactions.md
+terraform -chdir=infra/bootstrap apply       # budget alert, Terraform state storage
+terraform -chdir=infra/platform apply        # lake, Databricks, Key Vault, Data Factory
+terraform -chdir=infra/unity-catalog apply   # catalog, schemas, volumes
+databricks bundle deploy -t azure            # the daily job and the health check
+terraform -chdir=infra/orchestration apply   # Data Factory pipelines and the daily trigger
+terraform -chdir=infra/cicd apply            # GitHub OIDC identity: merges deploy themselves
 ```
 
-Use `--sample-rows 200000` for a quick first look at a multi-gigabyte file.
+Step-by-step, with the backend and variable files each stack needs: [infra](infra/README.md), [orchestration](docs/orchestration.md), [CI/CD](docs/cicd.md). When something fails: [runbook](docs/runbook.md).
 
-## Data
+## What the data says
 
-Official DLD open data only; no listing sites are scraped. See [docs/data_sources.md](docs/data_sources.md) for sources and caveats, [docs/data_dictionary.md](docs/data_dictionary.md) for columns, and [docs/business_questions.md](docs/business_questions.md) for what the dashboard answers. Raw data is never committed.
+Three insights from the dashboard, with real numbers, after the full-history run:
+
+1. _
+2. _
+3. _
+
+## Lessons learned
+
+- **Test what production runs, not something close to it.** Local tests fell back to Parquet when Delta was unavailable, which hid a write that used the wrong table format; the first CI run with Delta caught it. CI now refuses to run without Delta.
+- **Lazy plans grow.** Tests that chained silver, dimensions, facts and aggregates without materialising anything ran out of driver memory. The pipeline never had the problem, because it writes each layer to a table, and the tests now checkpoint the same way.
+- **Every tool has its own type system.** Power BI imports source decimals as floating point. The test that keeps the Power BI model in step with gold now compares types as Power BI sees them, not as Spark writes them.
+- **Silence is a failure mode.** Alerts fire when something runs and fails, not when nothing runs at all. A daily health check reports STALE when the last complete run is more than 26 hours old.
+- **Rules as data pay off before the data arrives.** The cleaning rules, thresholds and mappings live in plain Python files, written against the expected schema, so adapting to the real files is an edit to one reviewed file, not a hunt through Spark code.
+- **Identities instead of secrets is less work, not more.** No key or token was ever created, so there is nothing to rotate, store in Key Vault, or leak in a public repository.
+
+## What I would do next
+
+- Cross-check monthly medians against the official DLD Residential Sale Price Index, and publish the gap.
+- Net rental yield, using service charges and typical vacancy.
+- Load the DLD projects and developers datasets to fill `dim_project` (developer, status).
+- Incremental MERGE into the gold facts, worthwhile once volumes or refresh frequency grow.
+- Rebuild the gold layer and report in Microsoft Fabric (Lakehouse + Power BI Direct Lake).
+
+## Repository layout
+
+```
+├── src/dubai_property/   # all pipeline logic, tested
+│   ├── profiling/  bronze/  silver/  gold/  quality/
+│   ├── orchestrate.py    # the pipeline, and one job step at a time
+│   ├── monitoring.py     # views over the pipeline's own logs; health.py: one status
+│   └── config.py         # datasets, paths, table names
+├── notebooks/            # thin notebooks that call src/ (00 setup … 09 monitoring)
+├── tests/                # unit/, spark/, integration/, fixtures/
+├── infra/                # Terraform: bootstrap, platform, unity-catalog, orchestration, cicd
+├── databricks.yml        # Databricks Asset Bundle (jobs in resources/)
+├── adf/                  # Data Factory pipelines (JSON)
+├── powerbi/              # Power BI project: model (TMDL), report, theme
+├── tools/                # synthetic sample data for the report
+└── docs/                 # architecture, decisions, runbooks, data dictionary, cost
+```
+
+## Documentation
+
+| Topic | |
+|---|---|
+| How each layer works | [architecture](docs/architecture.md) |
+| Design questions, answered | [design Q&A](docs/design_qa.md) |
+| Data | [sources](docs/data_sources.md) · [dictionary](docs/data_dictionary.md) · [business questions](docs/business_questions.md) |
+| Model and dashboard | [gold model](docs/gold_model.md) · [dashboard](docs/dashboard.md) · [Power BI](powerbi/README.md) |
+| Running it | [infra](infra/README.md) · [orchestration](docs/orchestration.md) · [CI/CD](docs/cicd.md) · [runbook](docs/runbook.md) · [cost](docs/cost.md) |
+| Decisions | [ADRs 0001–0009](docs/adr/) |
+| History | [CHANGELOG](CHANGELOG.md) |
 
 ## Roadmap
 
-| Module | Scope | Status |
-|---|---|---|
-| 1 | Repo skeleton, data profiling, data dictionary, business questions | ✅ v0.1 |
-| 2 | Bronze ingestion with Auto Loader and load log | ✅ v0.2 |
-| 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ v0.3 |
-| 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ v0.4 |
-| 5 | Data quality framework and integration tests | ✅ v0.5 |
-| 6 | Power BI dashboard (minimum complete version) | 🔧 report built; real data, PDF and insights to come |
-| 7 | Azure infrastructure with Terraform | 🔧 code ready, apply pending |
-| 8 | Data Factory orchestration, Asset Bundles | 🔧 code ready, deployment pending |
-| 9 | CI/CD deploy, monitoring, runbook, cost | 🔧 code ready, setup pending |
-| 10 | Demo video and final write-up | ⏳ |
+| Module | Scope | Code | Live |
+|---|---|---|---|
+| 1 | Repo skeleton, data profiling, data dictionary, business questions | ✅ | ✅ v0.1 |
+| 2 | Bronze ingestion with Auto Loader and load log | ✅ | ✅ v0.2 |
+| 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ | ✅ v0.3 |
+| 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ | ✅ v0.4 |
+| 5 | Data quality framework and integration tests | ✅ | ✅ v0.5 |
+| 6 | Power BI dashboard | ✅ | real-data run, PDF, insights |
+| 7 | Azure infrastructure with Terraform | ✅ | apply, rebuild proof |
+| 8 | Data Factory orchestration, Asset Bundles | ✅ | deploy, backfill, schedule |
+| 9 | CI/CD deploy, monitoring, runbook, cost | ✅ | first deploy, measured cost |
+| 10 | Documentation and launch | ✅ | demo video |
 
-## Design decisions
+## Data and license
 
-Recorded as ADRs in [docs/adr/](docs/adr/). So far:
-
-- [0001 — Develop locally and on Databricks Free Edition before Azure](docs/adr/0001-local-first-development.md)
-- [0002 — Bronze ingestion: Auto Loader, idempotent foreachBatch, load log](docs/adr/0002-bronze-ingestion-design.md)
-- [0003 — Silver cleaning: explicit casts, quarantine, MERGE on the business key](docs/adr/0003-silver-cleaning-design.md)
-- [0004 — Gold star schema: hash surrogate keys, SCD Type 2 areas, full rebuilds](docs/adr/0004-gold-star-schema.md)
-- [0005 — Data quality: checks between layers, dq_results, fail before the next layer](docs/adr/0005-data-quality.md)
-- [0006 — Power BI model as code: import mode over gold, measures in DAX](docs/adr/0006-power-bi-model.md)
-- [0007 — Azure infrastructure: three Terraform stacks, identities instead of keys](docs/adr/0007-azure-infrastructure.md)
-- [0008 — Orchestration: Data Factory lands files and starts one Databricks job](docs/adr/0008-orchestration.md)
-- [0009 — CI/CD with OIDC, monitoring from the pipeline's own logs](docs/adr/0009-cicd-and-monitoring.md)
-
-## License
-
-MIT — see [LICENSE](LICENSE). DLD data is subject to the terms of its publisher.
+Official DLD open data only; no listing sites are scraped, because listing prices are asking prices and DLD records are registered prices. Raw data is never committed. Code under the MIT license ([LICENSE](LICENSE)); DLD data is subject to the terms of its publisher.
