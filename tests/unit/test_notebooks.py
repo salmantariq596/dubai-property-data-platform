@@ -64,9 +64,9 @@ def test_choice_widget_defaults_are_among_the_choices(path: Path):
         if call.func.attr not in CHOICE_WIDGETS:
             continue
         name, default, choices = (eval(ast.unparse(a), dict(namespace)) for a in call.args[:3])
-        assert default in list(
-            choices
-        ), f"{path.name}: widget {name!r} default {default!r} is not one of {list(choices)}"
+        assert default in list(choices), (
+            f"{path.name}: widget {name!r} default {default!r} is not one of {list(choices)}"
+        )
 
 
 def test_the_check_catches_a_joined_multiselect_default(tmp_path: Path):
