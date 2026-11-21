@@ -67,3 +67,28 @@ resources:
             notebook_path: ../notebooks/08_job_step.py
             base_parameters:
               step: quality_gold
+
+    # Alerts when nothing runs at all: fails (and emails) when the pipeline is FAILED or
+    # STALE, e.g. no complete run in the last 26 hours. Deployed paused, like the daily trigger.
+    health_check:
+      name: dpdp-health-check
+      description: Daily health check of the pipeline's own logs; fails when the pipeline is FAILED or STALE.
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+
+      schedule:
+        quartz_cron_expression: "0 0 8 * * ?"
+        timezone_id: Asia/Dubai
+        pause_status: PAUSED
+
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}
+
+      tasks:
+        - task_key: check
+          notebook_task:
+            notebook_path: ../notebooks/09_monitoring.py
+            base_parameters:
+              catalog: ${var.catalog}
+              fail_on_unhealthy: "true"

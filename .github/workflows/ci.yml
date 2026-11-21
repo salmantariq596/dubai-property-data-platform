@@ -58,10 +58,38 @@ jobs:
 
       - name: Validate
         run: |
-          for stack in bootstrap platform unity-catalog orchestration; do
+          for stack in bootstrap platform unity-catalog orchestration cicd; do
             terraform -chdir=infra/$stack init -backend=false -input=false
             terraform -chdir=infra/$stack validate
           done
+
+  # The Databricks bundle is valid against the real workspace. Pull requests only:
+  # the federated credential (infra/cicd) trusts pull requests and the production
+  # environment, and deploy.yml validates again on main. Skipped until the
+  # repository variables are set, and for forks (they cannot get an OIDC token).
+  bundle-validate:
+    name: Databricks bundle validate
+    if: vars.AZURE_CLIENT_ID != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_AUTH_TYPE: azure-cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: databricks/setup-cli@v0.240.0
+
+      - name: Validate
+        run: databricks bundle validate -t azure
 
   # Spark and Delta tests, split into groups that run at the same time on
   # separate runners. Balance the groups with the --durations output.
@@ -77,6 +105,7 @@ jobs:
               tests/spark/test_bronze_ingest.py
               tests/spark/test_silver_transform.py
               tests/spark/test_silver_pipeline.py
+              tests/spark/test_monitoring.py
           - group: gold
             tests: >-
               tests/spark/test_gold_model.py

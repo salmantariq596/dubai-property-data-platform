@@ -6,7 +6,7 @@ An Azure lakehouse that turns official Dubai Land Department (DLD) sales and ren
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> 🚧 **Status: Module 8 of 10 — orchestration with Data Factory (code ready; deployment next).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
+> 🚧 **Status: Module 9 of 10 — CI/CD, monitoring and cost (code ready; deployment next).** The platform is built in modules, each merged by pull request and tagged. See the [roadmap](#roadmap) and [CHANGELOG](CHANGELOG.md).
 
 ## Architecture
 
@@ -148,6 +148,14 @@ Every day at 02:00 Dubai time, Data Factory lands the new DLD files in the lake,
 
 How to deploy, run, backfill and recover: [orchestration](docs/orchestration.md). Design reasoning: [ADR 0008](docs/adr/0008-orchestration.md).
 
+## Operations: deploy, watch, recover
+
+- **CI on every pull request:** lint, unit tests, Spark tests in parallel groups, `terraform validate`, `databricks bundle validate`.
+- **Deploy on merge to `main`:** GitHub signs in to Azure with OIDC, so there is no stored secret, and deploys the Databricks bundle through a `production` environment. [How a change reaches production](docs/cicd.md).
+- **Monitoring from the pipeline's own logs:** last run per step, rows per load, failure and quality trends, quarantine rate, job cost from Databricks billing (`notebooks/09_monitoring`).
+- **One health status:** OK / WARN / STALE / FAILED. A daily health check alerts even when the pipeline did not run at all.
+- **When something fails:** [runbook](docs/runbook.md). **What it costs and why it stays low:** [cost](docs/cost.md). Design reasoning: [ADR 0009](docs/adr/0009-cicd-and-monitoring.md).
+
 ## Repository layout
 
 ```
@@ -162,7 +170,7 @@ How to deploy, run, backfill and recover: [orchestration](docs/orchestration.md)
 │   ├── utils/
 ├── notebooks/            # thin notebooks that call src/
 ├── tests/                # unit/, spark/, integration/, fixtures/
-├── infra/                # Terraform: bootstrap, platform, unity-catalog, orchestration
+├── infra/                # Terraform: bootstrap, platform, unity-catalog, orchestration, cicd
 ├── databricks.yml        # Databricks Asset Bundle: the scheduled job (resources/jobs.yml)
 ├── adf/                  # Data Factory pipelines (JSON), deployed by infra/orchestration
 ├── powerbi/              # semantic model (TMDL), theme, report and PDF export
@@ -210,7 +218,7 @@ Official DLD open data only; no listing sites are scraped. See [docs/data_source
 | 6 | Power BI dashboard (minimum complete version) | 🔧 report built; real data, PDF and insights to come |
 | 7 | Azure infrastructure with Terraform | 🔧 code ready, apply pending |
 | 8 | Data Factory orchestration, Asset Bundles | 🔧 code ready, deployment pending |
-| 9 | CI/CD deploy, monitoring, runbook, cost | ⏳ |
+| 9 | CI/CD deploy, monitoring, runbook, cost | 🔧 code ready, setup pending |
 | 10 | Demo video and final write-up | ⏳ |
 
 ## Design decisions
@@ -225,6 +233,7 @@ Recorded as ADRs in [docs/adr/](docs/adr/). So far:
 - [0006 — Power BI model as code: import mode over gold, measures in DAX](docs/adr/0006-power-bi-model.md)
 - [0007 — Azure infrastructure: three Terraform stacks, identities instead of keys](docs/adr/0007-azure-infrastructure.md)
 - [0008 — Orchestration: Data Factory lands files and starts one Databricks job](docs/adr/0008-orchestration.md)
+- [0009 — CI/CD with OIDC, monitoring from the pipeline's own logs](docs/adr/0009-cicd-and-monitoring.md)
 
 ## License
 

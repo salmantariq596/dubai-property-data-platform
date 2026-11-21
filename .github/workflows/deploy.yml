@@ -1,0 +1,51 @@
+name: Deploy
+
+# Merging to main deploys the Databricks bundle (the daily job and the health
+# check) to the Azure workspace. No secrets: GitHub signs in to Azure with a
+# short-lived OIDC token that the federated credential in infra/cicd trusts.
+#
+# Off until the repository variables AZURE_CLIENT_ID, AZURE_TENANT_ID,
+# AZURE_SUBSCRIPTION_ID and DATABRICKS_HOST are set (docs/cicd.md).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deployment at a time; a newer one waits instead of cancelling a half-done deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # lets the job request the OIDC token
+
+jobs:
+  bundle:
+    name: Deploy Databricks bundle
+    if: vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    environment: production # the federated credential trusts this environment only
+    env:
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_AUTH_TYPE: azure-cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: databricks/setup-cli@v0.240.0
+
+      - name: Validate
+        run: databricks bundle validate -t azure
+
+      - name: Deploy
+        run: databricks bundle deploy -t azure
+
+      - name: Summary
+        run: databricks bundle summary -t azure >> "$GITHUB_STEP_SUMMARY"

@@ -2,6 +2,41 @@
 
 Each module is merged with a pull request and tagged.
 
+## [Unreleased] — Module 9: CI/CD, monitoring and cost (code ready, setup pending)
+
+### Added
+- `.github/workflows/deploy.yml`: on merge to `main`, validate and deploy the Databricks bundle through the `production` environment. GitHub signs in to Azure with OIDC; there are no secrets.
+- CI job `bundle-validate` on pull requests. Deploy and bundle validation are skipped until the repository variables exist, so CI stays green before Azure.
+- `infra/cicd` Terraform stack:
+  - Entra app with federated credentials for pull requests and the `production` environment, and no client secret;
+  - Contributor on the workspace;
+  - `ALL_PRIVILEGES` on the catalog for the identity the jobs run as.
+
+  CI validates it.
+- `dubai_property.monitoring` views:
+  - `last_runs`: last run per step;
+  - `rows_per_load`;
+  - `failure_trend`;
+  - `dq_trend`;
+  - `quarantine_trend`;
+  - `pipeline_health`.
+
+  `dubai_property.health.assess` turns them into OK / WARN / STALE / FAILED. STALE (no complete run in 26 hours) catches the run that never happened.
+- `notebooks/09_monitoring.py`: health, views and job cost from `system.billing`. New bundle job `dpdp-health-check`: daily at 08:00 Dubai, paused by default, fails and emails when the pipeline is FAILED or STALE.
+- `docs/runbook.md` (single entry point when something fails), `docs/cost.md` (cost model, controls in place, how to measure), `docs/cicd.md` (how a code change reaches production; one-time setup), ADR 0009.
+- 15 unit tests:
+  - health rules;
+  - deploy only from `main` through `production`;
+  - no `secrets.` in any workflow;
+  - cloud jobs off until configured;
+  - federated credential subjects match the workflows;
+  - health check paused and alerting.
+
+  Plus 5 Spark tests for the monitoring views.
+
+### To do before v0.9.0
+- Apply `infra/cicd`, create the `production` environment, set the four repository variables, see the first green deploy; fill `docs/cost.md` with measured numbers; unpause the health check.
+
 ## [Unreleased] — Module 8: Orchestration with Data Factory (code ready, deployment pending)
 
 ### Added
