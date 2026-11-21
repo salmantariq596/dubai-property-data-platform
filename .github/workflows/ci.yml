@@ -106,6 +106,7 @@ jobs:
               tests/spark/test_silver_transform.py
               tests/spark/test_silver_pipeline.py
               tests/spark/test_monitoring.py
+              tests/spark/test_job_steps.py
           - group: gold
             tests: >-
               tests/spark/test_gold_model.py
@@ -114,7 +115,6 @@ jobs:
             tests: >-
               tests/spark/test_gold_pipeline.py
               tests/spark/test_quality_checks.py
-              tests/spark/test_job_steps.py
               tests/integration
     env:
       # Fail (don't skip) if Delta Lake can't start, so the Delta-only tests
