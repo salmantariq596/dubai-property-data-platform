@@ -316,12 +316,14 @@ def run_ingestion(
 
     for table in (target, settings.load_log_table):
         if spark.catalog.tableExists(table):
-            # Micro-batches write through a cloned session. Delta re-reads its
-            # log on every query, but plain file tables (used in local tests)
-            # keep a cached file listing here unless refreshed.
-            spark.catalog.refreshTable(table)
             if settings.table_format == "delta":
                 _ensure_append_only(spark, table)
+            else:
+                # Micro-batches write through a cloned session. Delta re-reads its
+                # log on every query, but plain file tables (used in local tests)
+                # keep a cached file listing here unless refreshed. Never needed
+                # for Delta, and REFRESH TABLE is not allowed on serverless.
+                spark.catalog.refreshTable(table)  # local-only
 
     rows = (
         spark.table(settings.load_log_table)
