@@ -9,6 +9,10 @@
 # MAGIC   rebuilt and the dashboard keeps the last good data. The notebook then fails, so the
 # MAGIC   scheduler's failure path (alert) runs.
 # MAGIC - Every step is safe to repeat. After fixing the cause, run the notebook again.
+# MAGIC
+# MAGIC **Parameters** appear as boxes above the notebook after the first cell has run.
+# MAGIC The defaults run both datasets in catalog `dubai`; on Free Edition without a
+# MAGIC `dubai` catalog, set `catalog` to `workspace`. `datasets` is comma-separated.
 
 # COMMAND ----------
 
@@ -21,11 +25,13 @@ from dubai_property.config import PipelineSettings
 from dubai_property.orchestrate import DATASETS, run_pipeline
 
 dbutils.widgets.text("catalog", "dubai")
-dbutils.widgets.multiselect("datasets", ",".join(DATASETS), list(DATASETS))
+# A text box, not a multiselect: a multiselect's default must be a single choice,
+# and jobs pass "transactions,rents" as one string anyway (same as 08_job_step).
+dbutils.widgets.text("datasets", ",".join(DATASETS))
 dbutils.widgets.text("load_id", "")  # Data Factory passes its pipeline run id here
 
 catalog = dbutils.widgets.get("catalog").strip()
-datasets = tuple(d for d in dbutils.widgets.get("datasets").split(",") if d)
+datasets = tuple(d.strip() for d in dbutils.widgets.get("datasets").split(",") if d.strip())
 load_id = dbutils.widgets.get("load_id").strip() or None
 
 settings = PipelineSettings.for_databricks(catalog)
