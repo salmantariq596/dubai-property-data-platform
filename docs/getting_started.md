@@ -1,6 +1,6 @@
 # Getting started: from clone to dashboard on real data
 
-This walks through the platform from a fresh clone to the Power BI dashboard on real DLD data. Every step was run in that order in November 2026, and the traps found on the way are written in. Parts 1 to 4 cost nothing; part 5 (Azure) is the production deployment.
+This walks through the platform from a fresh clone to the Power BI dashboard on real DLD data. Parts 1 to 4 were run in this order in November 2026, from a fresh clone, and the traps found on the way are written in; they cost nothing. Part 5 (Azure) is the production deployment, summarised from the infrastructure guides it links to.
 
 | Part | What you get | Time | Cost |
 |---|---|---|---|
