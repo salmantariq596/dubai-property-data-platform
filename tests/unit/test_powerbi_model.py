@@ -96,6 +96,49 @@ def test_dax_medians_match_gold_rules():
     assert ">= 10" in rents["Gross Yield %"]  # gold.rules.MIN_RECORDS_FOR_YIELD
 
 
+HOMES = (
+    'KEEPFILTERS ( fact_sales[property_usage_en] = "Residential" )',
+    'KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } )',
+)
+
+
+@pytest.mark.parametrize(
+    "measure", ["Priced Sales", "Median Price per Sqft", "Median Sale Price AED"]
+)
+def test_prices_are_for_homes_only(measure):
+    """Land (plot area) and whole buildings (wholesale) distort per-sqft medians, and
+    "Unit" also covers shops and offices. KEEPFILTERS keeps the property type slicer working."""
+    dax = TABLES["fact_sales"].measures[measure]
+    assert all(rule in dax for rule in HOMES)
+
+
+def test_price_growth_compares_the_last_12_months_with_the_12_before():
+    """Same period last year over a multi-year selection compares almost the same years."""
+    sales = TABLES["fact_sales"].measures
+    assert "SAMEPERIODLASTYEAR" not in sales["Median Price per Sqft YoY %"]
+    assert "[Median Price per Sqft 12M]" in sales["Median Price per Sqft YoY %"]
+    assert "-12 ) && dim_date[date] <= LastDay" in sales["Median Price per Sqft 12M"]
+    assert (
+        "-24 ) && dim_date[date] <= EDATE ( LastDay, -12 )"
+        in sales["Median Price per Sqft Prior 12M"]
+    )
+    growth = sales["Price Growth % (50+ sales)"]
+    assert "[Priced Sales 12M] >= 50" in growth and "[Priced Sales Prior 12M] >= 50" in growth
+
+
+def test_thin_months_and_missing_data_are_blank():
+    sales = TABLES["fact_sales"].measures
+    assert sales["Median Price per Sqft LY"].startswith("IF ( [Priced Sales] > 0")
+    for side in ("Off-plan", "Ready"):
+        assert ">= 20" in sales[f"Median Price per Sqft {side}"]
+
+
+def test_parameter_defaults_are_not_machine_specific():
+    text = (MODEL / "expressions.tmdl").read_text(encoding="utf-8")
+    folder = re.search(r'expression GoldFolder = "([^"]*)"', text).group(1)
+    assert "dubai-property-data-platform" not in folder and "Users" not in folder
+
+
 def test_slicers_can_use_todays_area_name():
     columns = TABLES["dim_area"].columns
     assert columns["current_area_name_en"].expression

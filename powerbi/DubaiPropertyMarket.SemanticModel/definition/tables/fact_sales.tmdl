@@ -16,27 +16,68 @@ table fact_sales
 		displayFolder: Sales
 		lineageTag: 0dfc01bc-8585-4895-9fdc-81c4d55d332d
 
-	measure 'Priced Sales' = CALCULATE ( COUNTROWS ( fact_sales ), fact_sales[is_outlier] = FALSE (), NOT ISBLANK ( fact_sales[price_per_sqft] ) )
+	measure 'Priced Sales' = CALCULATE ( COUNTROWS ( fact_sales ), fact_sales[is_outlier] = FALSE (), NOT ISBLANK ( fact_sales[price_per_sqft] ), KEEPFILTERS ( fact_sales[property_usage_en] = "Residential" ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
 		formatString: #,0
 		displayFolder: Sales
 		lineageTag: 9778badb-e658-4261-b212-2af59025dda6
 
-	measure 'Median Price per Sqft' = CALCULATE ( MEDIAN ( fact_sales[price_per_sqft] ), fact_sales[is_outlier] = FALSE () )
+	measure 'Median Price per Sqft' = CALCULATE ( MEDIAN ( fact_sales[price_per_sqft] ), fact_sales[is_outlier] = FALSE (), KEEPFILTERS ( fact_sales[property_usage_en] = "Residential" ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
 		formatString: #,0
 		displayFolder: Prices
 		lineageTag: 2d0e2d01-bec0-4b9c-b307-1c80aa8ca264
 
-	measure 'Median Sale Price AED' = CALCULATE ( MEDIAN ( fact_sales[value_aed] ), fact_sales[is_outlier] = FALSE () )
+	measure 'Median Sale Price AED' = CALCULATE ( MEDIAN ( fact_sales[value_aed] ), fact_sales[is_outlier] = FALSE (), KEEPFILTERS ( fact_sales[property_usage_en] = "Residential" ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
 		formatString: #,0
 		displayFolder: Prices
 		lineageTag: 28fafbc1-d7b2-4934-9677-4b588d4141b6
 
-	measure 'Median Price per Sqft LY' = CALCULATE ( [Median Price per Sqft], SAMEPERIODLASTYEAR ( dim_date[date] ) )
+	measure 'Median Price per Sqft LY' = IF ( [Priced Sales] > 0, CALCULATE ( [Median Price per Sqft], SAMEPERIODLASTYEAR ( dim_date[date] ) ) )
 		formatString: #,0
 		displayFolder: Prices
 		lineageTag: a6146c95-3d35-4983-8fb9-587de4500b39
 
-	measure 'Median Price per Sqft YoY %' = DIVIDE ( [Median Price per Sqft] - [Median Price per Sqft LY], [Median Price per Sqft LY] )
+	measure 'Latest Sale Key' = CALCULATE ( MAX ( fact_sales[date_key] ), REMOVEFILTERS ( dim_area ), REMOVEFILTERS ( dim_property_type ), REMOVEFILTERS ( dim_project ) )
+		formatString: 0
+		displayFolder: Prices\Helpers
+		lineageTag: cbca9b52-79cf-4899-86b1-4b181ba2b054
+
+	measure 'Median Price per Sqft 12M' =
+			VAR LatestKey = [Latest Sale Key]
+			VAR LastDay = DATE ( INT ( LatestKey / 10000 ), MOD ( INT ( LatestKey / 100 ), 100 ), MOD ( LatestKey, 100 ) )
+			VAR Period = FILTER ( ALL ( dim_date[date] ), dim_date[date] > EDATE ( LastDay, -12 ) && dim_date[date] <= LastDay )
+			RETURN IF ( NOT ISBLANK ( LatestKey ), CALCULATE ( [Median Price per Sqft], REMOVEFILTERS ( dim_date ), Period ) )
+		formatString: #,0
+		displayFolder: Prices\Helpers
+		lineageTag: 2421f2bc-6b5c-4368-83c2-1548edce7f03
+
+	measure 'Median Price per Sqft Prior 12M' =
+			VAR LatestKey = [Latest Sale Key]
+			VAR LastDay = DATE ( INT ( LatestKey / 10000 ), MOD ( INT ( LatestKey / 100 ), 100 ), MOD ( LatestKey, 100 ) )
+			VAR Period = FILTER ( ALL ( dim_date[date] ), dim_date[date] > EDATE ( LastDay, -24 ) && dim_date[date] <= EDATE ( LastDay, -12 ) )
+			RETURN IF ( NOT ISBLANK ( LatestKey ), CALCULATE ( [Median Price per Sqft], REMOVEFILTERS ( dim_date ), Period ) )
+		formatString: #,0
+		displayFolder: Prices\Helpers
+		lineageTag: 4e9fc535-1839-4c1d-8dc0-8a0d7c906040
+
+	measure 'Priced Sales 12M' =
+			VAR LatestKey = [Latest Sale Key]
+			VAR LastDay = DATE ( INT ( LatestKey / 10000 ), MOD ( INT ( LatestKey / 100 ), 100 ), MOD ( LatestKey, 100 ) )
+			VAR Period = FILTER ( ALL ( dim_date[date] ), dim_date[date] > EDATE ( LastDay, -12 ) && dim_date[date] <= LastDay )
+			RETURN IF ( NOT ISBLANK ( LatestKey ), CALCULATE ( [Priced Sales], REMOVEFILTERS ( dim_date ), Period ) )
+		formatString: #,0
+		displayFolder: Prices\Helpers
+		lineageTag: 2343409e-2413-4511-97eb-816211986cca
+
+	measure 'Priced Sales Prior 12M' =
+			VAR LatestKey = [Latest Sale Key]
+			VAR LastDay = DATE ( INT ( LatestKey / 10000 ), MOD ( INT ( LatestKey / 100 ), 100 ), MOD ( LatestKey, 100 ) )
+			VAR Period = FILTER ( ALL ( dim_date[date] ), dim_date[date] > EDATE ( LastDay, -24 ) && dim_date[date] <= EDATE ( LastDay, -12 ) )
+			RETURN IF ( NOT ISBLANK ( LatestKey ), CALCULATE ( [Priced Sales], REMOVEFILTERS ( dim_date ), Period ) )
+		formatString: #,0
+		displayFolder: Prices\Helpers
+		lineageTag: ca2e34a2-c3ef-455c-a125-1304fc3cb6e6
+
+	measure 'Median Price per Sqft YoY %' = DIVIDE ( [Median Price per Sqft 12M] - [Median Price per Sqft Prior 12M], [Median Price per Sqft Prior 12M] )
 		formatString: 0.0%
 		displayFolder: Prices
 		lineageTag: 130e0df0-e2b5-454e-9e62-e9ccc4b47ae9
@@ -51,12 +92,12 @@ table fact_sales
 		displayFolder: Off-plan
 		lineageTag: 44f67e3d-0e63-4e76-b533-fa2d177b05f5
 
-	measure 'Median Price per Sqft Off-plan' = CALCULATE ( [Median Price per Sqft], fact_sales[is_offplan] = TRUE () )
+	measure 'Median Price per Sqft Off-plan' = IF ( CALCULATE ( [Priced Sales], fact_sales[is_offplan] = TRUE () ) >= 20, CALCULATE ( [Median Price per Sqft], fact_sales[is_offplan] = TRUE () ) )
 		formatString: #,0
 		displayFolder: Off-plan
 		lineageTag: 065b5f5c-7bc2-45e3-b07a-dc6d32fbe3fa
 
-	measure 'Median Price per Sqft Ready' = CALCULATE ( [Median Price per Sqft], fact_sales[is_offplan] = FALSE () )
+	measure 'Median Price per Sqft Ready' = IF ( CALCULATE ( [Priced Sales], fact_sales[is_offplan] = FALSE () ) >= 20, CALCULATE ( [Median Price per Sqft], fact_sales[is_offplan] = FALSE () ) )
 		formatString: #,0
 		displayFolder: Off-plan
 		lineageTag: 0b770f3f-822c-40c8-baea-33a0186b357d
@@ -66,7 +107,7 @@ table fact_sales
 		displayFolder: Off-plan
 		lineageTag: 86ac523a-3f97-4efc-899a-7815031483d6
 
-	measure 'Price Growth % (50+ sales)' = IF ( [Priced Sales] >= 50, [Median Price per Sqft YoY %] )
+	measure 'Price Growth % (50+ sales)' = IF ( [Priced Sales 12M] >= 50 && [Priced Sales Prior 12M] >= 50, [Median Price per Sqft YoY %] )
 		formatString: 0.0%
 		displayFolder: Prices
 		lineageTag: 03bba78b-fb18-4307-a8a5-1714eba7fa9b
