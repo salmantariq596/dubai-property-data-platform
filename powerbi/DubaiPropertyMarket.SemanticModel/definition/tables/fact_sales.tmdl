@@ -102,7 +102,13 @@ table fact_sales
 		displayFolder: Off-plan
 		lineageTag: 0b770f3f-822c-40c8-baea-33a0186b357d
 
-	measure 'Off-plan Premium %' = DIVIDE ( [Median Price per Sqft Off-plan] - [Median Price per Sqft Ready], [Median Price per Sqft Ready] )
+	measure 'Off-plan Premium %' =
+			VAR LatestKey = [Latest Sale Key]
+			VAR LastDay = DATE ( INT ( LatestKey / 10000 ), MOD ( INT ( LatestKey / 100 ), 100 ), MOD ( LatestKey, 100 ) )
+			VAR Period = FILTER ( ALL ( dim_date[date] ), dim_date[date] > EDATE ( LastDay, -12 ) && dim_date[date] <= LastDay )
+			VAR ByType = ADDCOLUMNS ( VALUES ( dim_property_type[property_type] ), "OffPlan", CALCULATE ( [Median Price per Sqft Off-plan], REMOVEFILTERS ( dim_date ), Period ), "Ready", CALCULATE ( [Median Price per Sqft Ready], REMOVEFILTERS ( dim_date ), Period ), "Weight", CALCULATE ( [Priced Sales], fact_sales[is_offplan] = TRUE (), REMOVEFILTERS ( dim_date ), Period ) )
+			VAR Compared = FILTER ( ByType, NOT ISBLANK ( [OffPlan] ) && NOT ISBLANK ( [Ready] ) )
+			RETURN IF ( NOT ISBLANK ( LatestKey ), DIVIDE ( SUMX ( Compared, DIVIDE ( [OffPlan] - [Ready], [Ready] ) * [Weight] ), SUMX ( Compared, [Weight] ) ) )
 		formatString: 0.0%
 		displayFolder: Off-plan
 		lineageTag: 86ac523a-3f97-4efc-899a-7815031483d6

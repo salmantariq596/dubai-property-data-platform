@@ -71,8 +71,9 @@ def test_dax_references_exist(where, dax):
     for table, column in re.findall(r"\b(\w+)\[([^\]]+)\]", dax):
         assert table in TABLES, f"{where}: unknown table {table}"
         assert column in TABLES[table].columns, f"{where}: unknown column {table}[{column}]"
+    local = set(re.findall(r'"(\w+)",', dax))  # columns added in the expression (ADDCOLUMNS)
     for measure in re.findall(r"(?<![\w\]])\[([^\]]+)\]", dax):
-        assert measure in MEASURES, f"{where}: unknown measure [{measure}]"
+        assert measure in MEASURES or measure in local, f"{where}: unknown measure [{measure}]"
 
 
 def test_the_plan_measures_exist():
@@ -132,6 +133,15 @@ def test_thin_months_and_missing_data_are_blank():
     assert sales["Median Price per Sqft LY"].startswith("IF ( [Priced Sales] > 0")
     for side in ("Off-plan", "Ready"):
         assert ">= 20" in sales[f"Median Price per Sqft {side}"]
+
+
+def test_offplan_premium_compares_like_with_like():
+    """Over all years, ready sales reach back to 2000 while off-plan sales cluster in recent,
+    pricier years, and off-plan is mostly apartments while ready includes cheaper villas."""
+    premium = TABLES["fact_sales"].measures["Off-plan Premium %"]
+    assert "VALUES ( dim_property_type[property_type] )" in premium  # within each type
+    assert "EDATE ( LastDay, -12 )" in premium  # the last 12 months
+    assert "* [Weight]" in premium  # weighted by off-plan sales
 
 
 def test_parameter_defaults_are_not_machine_specific():
