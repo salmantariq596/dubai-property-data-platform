@@ -4,6 +4,7 @@ Four pages, one message each. Every page answers questions from [business_questi
 
 ## On every page
 
+- **Dates up to today:** a report filter keeps `dim_date[date]` in the last 27 years up to today, so the Year slicer and every date axis stop at the current year. The date table itself runs to 2030, because rent contracts end in the future.
 - **Slicers** (top bar, synced across pages): `dim_date[year]` (between), `dim_area[current_area_name_en]` (dropdown, search on), `dim_property_type[property_type]` (dropdown).
 - **Arabic tooltip:** every visual that shows areas has the `Area (Arabic)` measure in its tooltip.
 - **Footer text:** "Source: Dubai Land Department open data. Registered transactions; outliers excluded from medians. Latest month is preliminary."
@@ -17,7 +18,7 @@ Use area names from `dim_area[current_area_name_en]` in visuals and slicers. Are
 
 | Visual | Fields |
 |---|---|
-| 4 cards | `Sales`, `Sales Value AED`, `Median Price per Sqft`, `Median Price per Sqft YoY %` |
+| 4 cards | `Sales`, `Sales Value AED`, `Median Price per Sqft`, `Median Price per Sqft YoY %`; two decimal places (1.38M, not 1M) |
 | Line chart: price trend | X `dim_date[month_start]`, Y `Median Price per Sqft` and `Median Price per Sqft LY` |
 | Column chart: activity | X `dim_date[month_start]`, Y `Sales`, line `Off-plan Share` (combo chart) |
 | Bar chart: fastest risers | Y `dim_area[current_area_name_en]`, X `Median Price per Sqft YoY %`, top 10 by value, visual filter `Priced Sales ≥ 50` |

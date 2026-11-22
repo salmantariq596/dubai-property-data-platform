@@ -75,6 +75,153 @@
         }
       }
     },
+    "objects": {
+      "value": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "28D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "id": "default"
+          }
+        },
+        {
+          "properties": {
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "2L"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_sales.Sales"
+          }
+        },
+        {
+          "properties": {
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "2L"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_sales.Sales Value AED"
+          }
+        },
+        {
+          "properties": {
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "2L"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_sales.Median Price per Sqft"
+          }
+        },
+        {
+          "properties": {
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "2L"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_sales.Median Price per Sqft YoY %"
+          }
+        }
+      ],
+      "layout": [
+        {
+          "properties": {
+            "alignment": {
+              "expr": {
+                "Literal": {
+                  "Value": "'middle'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "7227566faaa125f65dae",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "fact_sales"
+              }
+            },
+            "Property": "Sales"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "48a626f03a1d59148cdf",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "fact_sales"
+              }
+            },
+            "Property": "Sales Value AED"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "658d39c7b724a3c9a9d7",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "fact_sales"
+              }
+            },
+            "Property": "Median Price per Sqft"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "384b2dba2ee3c0c38700",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "fact_sales"
+              }
+            },
+            "Property": "Median Price per Sqft YoY %"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

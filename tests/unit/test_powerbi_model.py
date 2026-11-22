@@ -14,6 +14,7 @@ from powerbi_model import MODEL, model_files, read_model, read_relationships
 TABLES = read_model()
 MEASURES = {m: t.name for t in TABLES.values() for m in t.measures}
 THEME = Path(__file__).parents[2] / "powerbi" / "theme" / "dubai-market.json"
+REPORT = Path(__file__).parents[2] / "powerbi" / "DubaiPropertyMarket.Report" / "definition"
 
 
 def test_every_gold_table_is_in_the_model():
@@ -137,6 +138,15 @@ def test_parameter_defaults_are_not_machine_specific():
     text = (MODEL / "expressions.tmdl").read_text(encoding="utf-8")
     folder = re.search(r'expression GoldFolder = "([^"]*)"', text).group(1)
     assert "dubai-property-data-platform" not in folder and "Users" not in folder
+
+
+def test_dates_stop_today_on_every_page():
+    """The date table runs to 2030 for future rent end dates; slicers and axes must not."""
+    report = json.loads((REPORT / "report.json").read_text(encoding="utf-8"))
+    filters = report["filterConfig"]["filters"]
+    dates = [f for f in filters if f["field"]["Column"]["Property"] == "date"]
+    assert [f["type"] for f in dates] == ["RelativeDate"]
+    assert '"Now"' in json.dumps(dates[0]["filter"])
 
 
 def test_slicers_can_use_todays_area_name():
