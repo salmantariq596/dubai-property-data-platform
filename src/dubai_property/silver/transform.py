@@ -68,9 +68,12 @@ class SilverFrames:
 
 
 def _source(df: DataFrame, name: str) -> Column:
-    if name in df.columns:
-        return F.col(f"`{name}`")
-    return F.lit(None).cast("string")
+    """The raw column for a silver field: its DLD name, else a known alias, else
+    the documented default (normally null) when the file has neither."""
+    for column in (name, *rules.SOURCE_ALIASES.get(name, ())):
+        if column in df.columns:
+            return F.col(f"`{column}`")
+    return F.lit(rules.MISSING_COLUMN_DEFAULTS.get(name)).cast("string")
 
 
 def _ymd(year: Column, month: Column, day: Column) -> Column:
@@ -209,8 +212,10 @@ def derive_transactions(df: DataFrame) -> DataFrame:
     )
 
     rooms = F.col("rooms_en")
-    bedrooms = F.when(rooms.rlike(rules.STUDIO), F.lit(0)).when(
-        rooms.rlike(rules.BEDROOMS), F.regexp_extract(rooms, rules.BEDROOMS, 1).cast("int")
+    bedrooms = (
+        F.when(rooms.rlike(rules.STUDIO), F.lit(0))
+        .when(rooms.rlike(rules.BEDROOMS), F.regexp_extract(rooms, rules.BEDROOMS, 1).cast("int"))
+        .when(rooms.rlike(rules.BEDROOM_COUNT), rooms.cast("int"))
     )
 
     return df.withColumns(

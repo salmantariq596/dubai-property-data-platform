@@ -2,6 +2,19 @@
 
 Each module is merged with a pull request and tagged.
 
+## [Unreleased] — Testing from a fresh clone, on Databricks Free Edition and on real data
+
+### Fixed
+- `make setup` now installs `pyarrow`, which `tools/make_sample_gold.py` needs; CI runs the script after a clean install.
+- `notebooks/06_run_pipeline`: the `datasets` widget failed on Databricks (a multiselect default must be one of its choices). It is now a text widget, and `tests/unit/test_notebooks.py` checks every notebook's widget defaults.
+- Bronze ran `REFRESH TABLE`, which serverless compute rejects; it is now only used for the Parquet tables of local tests. `tests/unit/test_serverless.py` scans `src/` and `notebooks/` for APIs serverless rejects.
+- ruff pinned to one version in pre-commit and the dev dependencies, so local formatting and CI agree.
+- `dld-profile` crashed on real data: free-format date parsing read a building named `1-1-2` as year 1. Dates are now parsed only in the two layouts silver accepts, within pandas' range.
+
+### Added
+- Silver reads DLD data redistributed under other column names (`SOURCE_ALIASES`), and treats a file without `trans_group_en` as a sales-only extract (`MISSING_COLUMN_DEFAULTS`). Bedroom counts given as bare numbers (`0` = studio) are read too.
+- First real data: 1,382,848 DLD sales (1975 to 2 November 2026) from Dubai Real Estate Data on Kaggle, CC BY 4.0, because Dubai Pulse is unreachable from outside the UAE. Source, license, attribution and checksum in `docs/data_sources.md`; profile in `docs/profiles/transactions.md`.
+
 ## [Unreleased] — Module 10: Documentation and launch
 
 ### Changed

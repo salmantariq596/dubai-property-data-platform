@@ -126,6 +126,34 @@ def fields_for(dataset: str) -> tuple[Field, ...]:
         raise KeyError(f"No silver rules for {dataset!r}. Known: {sorted(FIELDS)}") from None
 
 
+# --- other publishers of DLD data ---------------------------------------------------------
+
+# Some publishers redistribute DLD records under their own column names (see
+# docs/data_sources.md). Bronze keeps their files exactly as delivered; silver
+# reads the DLD name first, then each alias in order. Values must mean the same
+# thing: an alias is a rename, never a recalculation.
+SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
+    # Dubai Real Estate Data's sales export (Kaggle, CC BY 4.0)
+    "actual_worth": ("price_aed",),
+    "procedure_area": ("area_sqm",),
+    "reg_type_en": ("reg_type_label",),
+    "property_type_en": ("property_type_label",),
+    "property_sub_type_en": ("property_sub_type",),
+    "property_usage_en": ("usage_label",),
+    "project_name_en": ("project_name",),
+    "master_project_en": ("master_project_name",),
+    "building_name_en": ("building_name",),
+    "rooms_en": ("rooms_bucket",),  # 0 = studio, 1-5 bedrooms (5 = five or more)
+}
+
+# Used only when a file has neither the column nor any alias. A DLD export always
+# carries trans_group_en, so its mortgages and gifts are still left out of sales;
+# a file without the column is a sales-only extract, where every row is a sale.
+MISSING_COLUMN_DEFAULTS: dict[str, str] = {
+    "trans_group_en": "Sales",
+}
+
+
 # --- parsing patterns ------------------------------------------------------------------
 
 WHITESPACE = r"[\s ]+"  # includes the non-breaking space common in exports
@@ -138,6 +166,7 @@ ISO_DATE = r"^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$"
 DAY_FIRST_DATE = r"^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[ T].*)?$"
 
 BEDROOMS = r"(?i)^(\d{1,2})\s*b\s*/\s*r"  # "2 B/R"
+BEDROOM_COUNT = r"^(\d{1,2})$"  # a bare count, "0" for a studio (rooms_bucket)
 STUDIO = r"(?i)^studio"
 OFF_PLAN = r"(?i)off[\s-]*plan"  # reg_type_en: "Off-Plan Properties"
 PRE_REGISTRATION = r"(?i)pre[\s-]*reg"  # procedure_name_en: "Sell - Pre registration"

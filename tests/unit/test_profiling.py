@@ -70,6 +70,13 @@ def test_day_first_dates_are_parsed():
     assert p.max_date == "2024-03-01"
 
 
+def test_names_that_look_like_dates_are_not_parsed():
+    # Regression: a building named "1-1-2" was parsed as year 1 and crashed profiling.
+    p = profile_column(pd.Series(["1-1-2", "B-12", "Tower 3/4", "01-01-0001"], name="b"))
+    assert p.date_pct == 0.0
+    assert p.inferred_type != "date"
+
+
 def test_iso_dates_are_not_read_day_first():
     # Regression: dayfirst=True once turned 2024-03-01 into 3 January.
     p = profile_column(pd.Series(["2024-03-01", "2024-12-25T10:00:00"], name="d"))
