@@ -125,6 +125,8 @@ Measured from Databricks system billing and Azure Cost Management: [cost](docs/c
 
 ## How to run it
 
+**New here?** [Getting started](docs/getting_started.md) goes from a fresh clone to the dashboard on real data, step by step: what to install, which accounts to create, what each step should print, and the traps found along the way.
+
 **Locally, in minutes** (Python 3.10+):
 
 ```bash
@@ -199,6 +201,7 @@ Three insights from the dashboard, with real numbers, after the full-history run
 
 | Topic | |
 |---|---|
+| From clone to dashboard, step by step | [getting started](docs/getting_started.md) |
 | How each layer works | [architecture](docs/architecture.md) |
 | Design questions, answered | [design Q&A](docs/design_qa.md) |
 | Data | [sources](docs/data_sources.md) · [dictionary](docs/data_dictionary.md) · [business questions](docs/business_questions.md) |
