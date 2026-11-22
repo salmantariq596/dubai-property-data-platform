@@ -27,6 +27,23 @@ def test_field_names_are_unique_and_never_metadata(dataset):
     assert not any(n.startswith("_") for n in names)  # "_" is reserved for pipeline columns
 
 
+def test_source_aliases_rename_known_fields_without_shadowing_any():
+    field_names = {f.name for fields in rules.FIELDS.values() for f in fields}
+    aliases = [a for names in rules.SOURCE_ALIASES.values() for a in names]
+    assert set(rules.SOURCE_ALIASES) <= field_names
+    assert set(rules.MISSING_COLUMN_DEFAULTS) <= field_names
+    assert len(aliases) == len(set(aliases)), "one source column feeds one field"
+    assert not set(aliases) & field_names, "an alias must not hide a DLD column"
+
+
+@pytest.mark.parametrize(
+    ("rooms", "bedrooms"), [("0", "0"), ("3", "3"), ("12", "12"), ("2 B/R", None)]
+)
+def test_bedroom_count_pattern(rooms, bedrooms):
+    match = re.match(rules.BEDROOM_COUNT, rooms)
+    assert (match.group(1) if match else None) == bedrooms
+
+
 def test_fields_feed_the_measures_silver_derives():
     sales = {f.name: f.kind for f in rules.TRANSACTION_FIELDS}
     assert sales["instance_date"] == "date"

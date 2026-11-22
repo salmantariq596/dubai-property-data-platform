@@ -24,6 +24,9 @@ _ARABIC_RE = re.compile(r"[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]")
 _NUMERIC_RE = re.compile(r"^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?\d+(\.\d+)?$")
 
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+# Day first with a four-digit year, as silver accepts: 05-01-2024, 5/1/2024, 05.01.2024
+_DAY_FIRST_DATE_RE = r"^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[ T].*)?$"
+_MIN_YEAR, _MAX_YEAR = 1678, 2261  # the range of pandas' nanosecond timestamps
 
 # A cast "works" for a column when at least this share of non-null values parse.
 _TYPE_THRESHOLD = 0.95
@@ -106,17 +109,23 @@ def _to_date(values: pd.Series) -> pd.Series:
 
     The two formats are parsed separately on purpose: with ``dayfirst=True``
     pandas reads ISO "2024-03-01" as 3 January, which silently corrupts dates.
+    Nothing else is guessed: free-format parsing once read a building named
+    "1-1-2" as 2 January of year 1. Dates pandas cannot hold become NaT.
     """
     cleaned = values.str.strip()
     is_iso = cleaned.str.match(_ISO_DATE_RE)
+    day_first = cleaned[~is_iso].str.extract(_DAY_FIRST_DATE_RE).dropna()
+    iso_text = cleaned[is_iso].str[:10]
+    day_first_text = (
+        day_first[2] + "-" + day_first[1].str.zfill(2) + "-" + day_first[0].str.zfill(2)
+    )
+    text = pd.concat([iso_text, day_first_text])
+
     parsed = pd.Series(pd.NaT, index=cleaned.index, dtype="datetime64[ns]")
-    if is_iso.any():
-        parsed[is_iso] = pd.to_datetime(
-            cleaned[is_iso].str[:10], errors="coerce", format="%Y-%m-%d"
-        )
-    rest = ~is_iso
-    if rest.any():
-        parsed[rest] = pd.to_datetime(cleaned[rest], errors="coerce", dayfirst=True, format="mixed")
+    year = text.str[:4].astype(int)
+    text = text[(year >= _MIN_YEAR) & (year <= _MAX_YEAR)]  # what pandas can hold
+    if len(text):
+        parsed[text.index] = pd.to_datetime(text, errors="coerce", format="%Y-%m-%d")
     return parsed
 
 

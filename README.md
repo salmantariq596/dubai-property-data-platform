@@ -224,4 +224,6 @@ Three insights from the dashboard, with real numbers, after the full-history run
 
 ## Data and license
 
-Official DLD open data only; no listing sites are scraped, because listing prices are asking prices and DLD records are registered prices. Raw data is never committed. Code under the MIT license ([LICENSE](LICENSE)); DLD data is subject to the terms of its publisher.
+Official DLD open data only; no listing sites are scraped, because listing prices are asking prices and DLD records are registered prices. Raw data is never committed. Code under the MIT license ([LICENSE](LICENSE)).
+
+Sales data: Dubai Real Estate Data (dubairealestatedata.com), based on Dubai Land Department open data, CC BY 4.0. Where each dataset comes from, and why: [data sources](docs/data_sources.md).

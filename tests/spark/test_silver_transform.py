@@ -117,6 +117,84 @@ def test_bedrooms_and_booleans(spark):
     assert rejected(frames) == {"BAD_FLAG": ["invalid_has_parking"]}
 
 
+def publisher_sale(transaction_id, **overrides):
+    """A row from Dubai Real Estate Data's sales export: their names, no trans_group."""
+    row = {
+        "transaction_id": transaction_id,
+        "instance_date": "2025-03-14",
+        "reg_type_label": "Off-Plan",
+        "area_id": "355",
+        "area_name_en": "Business Bay",
+        "project_name": "Peninsula Four",
+        "master_project_name": "Business Bay",
+        "building_name": "Tower B",
+        "property_type_label": "Unit",
+        "property_sub_type": "Flat",
+        "usage_label": "Residential",
+        "rooms_bucket": "2",
+        "has_parking": "true",
+        "area_sqm": "100.0",
+        "price_aed": "2500000",
+        "price_psf": "2322.58",
+        "procedure_id": "102",
+        "procedure_name_en": "Sell - Pre registration",
+        "is_pre_registration": "true",
+        "quality_flags": "0",
+    }
+    row.update(overrides)
+    return row
+
+
+def test_a_publishers_column_names_are_read_as_their_dld_names(spark):
+    frames = transform(
+        bronze_frame(
+            spark,
+            [
+                publisher_sale("PUB-1"),
+                publisher_sale(
+                    "PUB-STUDIO",
+                    rooms_bucket="0",
+                    reg_type_label="Ready",
+                    procedure_id="11",
+                    procedure_name_en="Sell",
+                    is_pre_registration="false",
+                ),
+                publisher_sale("PUB-NO-ROOMS", rooms_bucket=None),
+            ],
+        ),
+        "transactions",
+    )
+    assert rejected(frames) == {}
+    rows = by_key(frames.valid)
+    row = rows["PUB-1"]
+    assert row["actual_worth"] == Decimal("2500000.00")
+    assert row["procedure_area"] == Decimal("100.00")
+    assert row["instance_date"] == date(2025, 3, 14)
+    assert (row["property_type_en"], row["property_sub_type_en"]) == ("Unit", "Flat")
+    assert (row["property_usage_en"], row["reg_type_en"]) == ("Residential", "Off-Plan")
+    assert (row["project_name_en"], row["master_project_en"]) == ("Peninsula Four", "Business Bay")
+    assert row["building_name_en"] == "Tower B"
+    assert row["trans_group_en"] == "Sales"  # sales-only extract: no trans_group column
+    assert (row["is_offplan"], row["bedrooms"], row["has_parking"]) == (True, 2, True)
+    assert row["price_per_sqft"] == Decimal("2322.58")  # silver's own figure matches theirs
+    assert (rows["PUB-STUDIO"]["bedrooms"], rows["PUB-STUDIO"]["is_offplan"]) == (0, False)
+    assert rows["PUB-NO-ROOMS"]["bedrooms"] is None
+
+
+def test_a_dld_export_keeps_its_own_transaction_group(spark):
+    """The sales default applies only when the column is absent, never to its values."""
+    frames = transform(
+        bronze_frame(
+            spark,
+            [sale("MORTGAGE", trans_group_en="Mortgages"), sale("BLANK", trans_group_en=None)],
+        ),
+        "transactions",
+    )
+    rows = by_key(frames.valid)
+    assert rows["MORTGAGE"]["trans_group_en"] == "Mortgages"
+    assert rows["BLANK"]["trans_group_en"] is None
+
+
 def test_rescued_and_keyless_rows_are_quarantined(spark):
     frames = transform(
         bronze_frame(
