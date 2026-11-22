@@ -61,13 +61,14 @@ All in the model (`powerbi/model/definition/tables/fact_*.tmdl`), with the same 
 | Measure | Definition |
 |---|---|
 | `Sales`, `Sales Value AED`, `Sales Value USD` | Count and sum of registered sales (mortgages and gifts are not in `fact_sales`) |
-| `Median Price per Sqft`, `Median Sale Price AED` | Medians over sales not flagged as outliers |
-| `Median Price per Sqft LY`, `… YoY %` | Same period last year (`SAMEPERIODLASTYEAR`), and the change |
+| `Median Price per Sqft`, `Median Sale Price AED`, `Priced Sales` | Medians and count over **homes only**: residential apartments (`Unit`) and villas, outliers excluded. Land trades on plot area and whole buildings sell wholesale, and `Unit` also covers shops and offices; all of them distort a per-sqft median. Counts and values (`Sales`, `Sales Value AED`) keep every registered sale |
+| `Median Price per Sqft LY` | Same period last year (`SAMEPERIODLASTYEAR`), blank where the current period has no priced sales |
+| `Median Price per Sqft YoY %` | The last 12 months against the 12 before, both ending at the latest sale in the selected years (helpers in *Prices\Helpers*). A same-period comparison over a multi-year selection compares almost the same years |
 | `Off-plan Sales`, `Off-plan Share` | Off-plan count, and its share of all sales |
-| `Median Price per Sqft Off-plan` / `Ready`, `Off-plan Premium %` | Medians per registration type, and the gap |
+| `Median Price per Sqft Off-plan` / `Ready`, `Off-plan Premium %` | Medians per registration type (homes only), blank below 20 priced sales so thin months don't spike the chart, and the gap |
 | `Contracts`, `Median Annual Rent AED` | Contract count, and median rent over single-unit contracts |
 | `Gross Yield %` | Median rent / median sale price; blank unless `Priced Sales` and `Priced Contracts` are both at least 10 |
-| `Price Growth % (50+ sales)` | YoY change in median price per sqft, blank below 50 priced sales: keeps tiny areas off the "fastest risers" chart |
+| `Price Growth % (50+ sales)` | `Median Price per Sqft YoY %`, blank unless both 12-month periods have at least 50 priced sales: keeps tiny areas off the "fastest risers" chart |
 | `Off-plan Premium % (20+ off-plan)` | Off-plan premium, blank below 20 off-plan sales |
 | `Area (Arabic)` | The area's Arabic name, for tooltips |
 

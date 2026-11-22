@@ -18,7 +18,7 @@ expression GoldCatalog = "dubai" meta [IsParameterQuery=true, Type="Text", IsPar
 
 	annotation PBI_ResultType = Text
 
-expression GoldFolder = "E:\Data Engineer\Dubai Property Data Platform(DPDP)\code\module-1\dubai-property-data-platform\data\sample_gold" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+expression GoldFolder = "C:\dubai-gold" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 	lineageTag: 1c6bec87-9585-48ce-9de6-6bf80627a393
 
 	annotation PBI_ResultType = Text
