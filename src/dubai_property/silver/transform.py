@@ -67,13 +67,19 @@ class SilverFrames:
 # --- casting -----------------------------------------------------------------------
 
 
-def _source(df: DataFrame, name: str) -> Column:
-    """The raw column for a silver field: its DLD name, else a known alias, else
-    the documented default (normally null) when the file has neither."""
-    for column in (name, *rules.SOURCE_ALIASES.get(name, ())):
-        if column in df.columns:
-            return F.col(f"`{column}`")
-    return F.lit(rules.MISSING_COLUMN_DEFAULTS.get(name)).cast("string")
+def _find(df: DataFrame, name: str, dataset: str | None) -> str | None:
+    """The bronze column holding a silver field: its DLD name, else a known alias."""
+    aliases = rules.aliases_for(dataset).get(name, ()) if dataset else ()
+    return next((c for c in (name, *aliases) if c in df.columns), None)
+
+
+def _source(df: DataFrame, name: str, dataset: str | None = None) -> Column:
+    """The raw column for a silver field, or the documented default (normally
+    null) when the file has neither the field nor an alias."""
+    if column := _find(df, name, dataset):
+        return F.col(f"`{column}`")
+    default = rules.defaults_for(dataset).get(name) if dataset else None
+    return F.lit(default).cast("string")
 
 
 def _ymd(year: Column, month: Column, day: Column) -> Column:
@@ -128,16 +134,23 @@ def _typed_column(field: rules.Field) -> Column:
     )
 
 
-def cast_fields(bronze: DataFrame, fields: tuple[rules.Field, ...]) -> DataFrame:
+def cast_fields(bronze: DataFrame, dataset: str) -> DataFrame:
     """Typed columns plus the cleaned raw text (``__raw_*``) the checks need."""
+    fields = rules.fields_for(dataset)
     data_columns = [c for c in bronze.columns if not c.startswith("_")]
     rescued = _source(bronze, RESCUED_COLUMN)
     raw_record = F.to_json(
         F.struct(*[F.col(f"`{c}`") for c in data_columns], rescued.alias(RESCUED_COLUMN))
     )
 
+    raw = {f.name: _source(bronze, f.name, dataset) for f in fields}
+    key = get_dataset(dataset).business_key
+    if key and _find(bronze, key, dataset) is None:
+        # No identifier in this file: the row's content is its identity.
+        raw[key] = F.concat(F.lit(rules.CONTENT_KEY_PREFIX), F.sha2(raw_record, 256))
+
     staged = bronze.select(
-        *[clean_text(_source(bronze, f.name)).alias(f"__raw_{f.name}") for f in fields],
+        *[clean_text(raw[f.name]).alias(f"__raw_{f.name}") for f in fields],
         raw_record.alias("raw_record"),
         rescued.alias(RESCUED_COLUMN),
         *[F.col(c) for c in LINEAGE_COLUMNS],
@@ -286,7 +299,7 @@ def transform(
 ) -> SilverFrames:
     """Clean one batch of bronze rows for ``dataset``."""
     key = get_dataset(dataset).business_key
-    checked = with_failed_rules(cast_fields(bronze, rules.fields_for(dataset)), dataset)
+    checked = with_failed_rules(cast_fields(bronze, dataset), dataset)
 
     rejected = checked.where(F.size("failed_rules") > 0)
     quarantine = rejected.select(

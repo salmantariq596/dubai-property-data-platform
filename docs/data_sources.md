@@ -20,7 +20,7 @@ All data comes from official Dubai Land Department (DLD) open data. No listing s
 |---|---|---|---|---|---|---|---|---|
 | Transactions | Dubai Pulse | 2026-11-22 | — | — | — | — | — | Timed out from outside the UAE |
 | Transactions (sales) | Kaggle: Dubai Real Estate Data | 2026-11-23 | 1975–2 Nov 2026 (thin before 2004) | CSV + Parquet | 241 MB CSV | 1,382,848 | Monthly | Sales only; publisher's column names (see below) |
-| Rents | | | | | | | | |
+| Rents (Ejari) | Kaggle: Daemon Data | 2026-11-23 | October 2026 only | CSV | — | 95,572 contracts | Never (one-off extract) | camelCase column names, no contract number (see below) |
 | Projects | | | | | | | | |
 | Price index | | | | | | | | |
 
@@ -34,6 +34,18 @@ All data comes from official Dubai Land Department (DLD) open data. No listing s
 - **Area names are DLD's cadastral names** (for example "Al Barsha South Fourth", not "Jumeirah Village Circle"), the same as a direct DLD export.
 - **Only the CSV is landed.** The download also contains Parquet, a data dictionary, a manifest with SHA-256 checksums and the license; keep them with the download, not in the landing folder.
 
+### Redistributed DLD data: Daemon Data's Ejari extract (Kaggle)
+
+"Dubai Property Sales & Ejari Rents, October 2026" on Kaggle, published by Daemon Data: every Ejari rent contract registered in October 2026 (`ejari_contracts_2026_10.csv`, 95,572 contracts), read from the DLD open-data gateway.
+
+- **License: CC BY 4.0** for the compilation; the data is DLD open data. Credit: *"Dubai Land Department open data; Ejari extract compiled by Daemon Data, CC BY 4.0."*
+- **One month only.** Rental yields can be shown for October 2026, the only month with both rents and sales.
+- **One row per contract.** The publisher collapsed multi-unit contracts (labour camps, shop rows, whole floors) into one row and dropped exact duplicates, which matches silver's rule that a contract's rent counts once.
+- **No contract number.** DLD publishes no Ejari numbers. Silver keys each row by a SHA-256 of its raw content (`CONTENT_KEY_PREFIX` in `silver/rules.py`), so a re-delivered row keeps its key and re-runs stay idempotent.
+- **Its own column names** (`annualAmountAed`, `startDate`, `area`, …), which bronze stores as snake_case and silver reads through the `rents` entry of `SOURCE_ALIASES`.
+- **Area names are DLD district names** (Marsa Dubai, Al Barsha South Fourth), the same naming as the sales export, so rents and sales meet in `dim_area`.
+- **Not used:** the same download's transactions file, which names areas by their marketed names (JUMEIRAH VILLAGE CIRCLE) and duplicates October in the sales export.
+
 ## Download log
 
 Record every file you land in `data/raw/`, so any load can be reproduced.
@@ -41,6 +53,7 @@ Record every file you land in `data/raw/`, so any load can be reproduced.
 | Load date | Dataset | File name | Source URL | Rows | Notes |
 |---|---|---|---|---|---|
 | 2026-11-23 | transactions | `dld_sales_transactions.csv` | Kaggle: "Dubai Real Estate Sales Transactions 2004-2026" (Dubai Real Estate Data) | 1,382,848 | Snapshot generated 2026-11-02; SHA-256 `1fa1d38d…b1b9eb` (`export-manifest.json`) |
+| 2026-11-23 | rents | `ejari_contracts_2026_10.csv` | Kaggle: "Dubai Property Sales & Ejari Rents, October 2026" (Daemon Data) | 95,572 | Contracts registered 1–31 October 2026 |
 
 ## Known caveats
 

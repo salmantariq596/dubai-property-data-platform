@@ -129,29 +129,62 @@ def fields_for(dataset: str) -> tuple[Field, ...]:
 # --- other publishers of DLD data ---------------------------------------------------------
 
 # Some publishers redistribute DLD records under their own column names (see
-# docs/data_sources.md). Bronze keeps their files exactly as delivered; silver
-# reads the DLD name first, then each alias in order. Values must mean the same
-# thing: an alias is a rename, never a recalculation.
-SOURCE_ALIASES: dict[str, tuple[str, ...]] = {
-    # Dubai Real Estate Data's sales export (Kaggle, CC BY 4.0)
-    "actual_worth": ("price_aed",),
-    "procedure_area": ("area_sqm",),
-    "reg_type_en": ("reg_type_label",),
-    "property_type_en": ("property_type_label",),
-    "property_sub_type_en": ("property_sub_type",),
-    "property_usage_en": ("usage_label",),
-    "project_name_en": ("project_name",),
-    "master_project_en": ("master_project_name",),
-    "building_name_en": ("building_name",),
-    "rooms_en": ("rooms_bucket",),  # 0 = studio, 1-5 bedrooms (5 = five or more)
+# docs/data_sources.md). Bronze keeps their files exactly as delivered (headers in
+# snake_case); silver reads the DLD name first, then each alias in order. Values
+# must mean the same thing: an alias is a rename, never a recalculation. Aliases
+# are per dataset, because the same name can mean different things in each.
+SOURCE_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
+    "transactions": {
+        # Dubai Real Estate Data's sales export (Kaggle, CC BY 4.0)
+        "actual_worth": ("price_aed",),
+        "procedure_area": ("area_sqm",),
+        "reg_type_en": ("reg_type_label",),
+        "property_type_en": ("property_type_label",),
+        "property_sub_type_en": ("property_sub_type",),
+        "property_usage_en": ("usage_label",),
+        "project_name_en": ("project_name",),
+        "master_project_en": ("master_project_name",),
+        "building_name_en": ("building_name",),
+        "rooms_en": ("rooms_bucket",),  # 0 = studio, 1-5 bedrooms (5 = five or more)
+    },
+    "rents": {
+        # Daemon Data's Ejari extract (Kaggle, CC BY 4.0), camelCase headers
+        "contract_reg_type_en": ("version",),  # New / Renewed
+        "contract_start_date": ("start_date",),
+        "contract_end_date": ("end_date",),
+        "contract_amount": ("contract_amount_aed",),
+        "annual_amount": ("annual_amount_aed",),
+        "ejari_property_type_en": ("property_type",),
+        "ejari_property_sub_type_en": ("property_sub_type",),
+        "property_usage_en": ("usage",),
+        "area_name_en": ("area",),
+        "project_name_en": ("project",),
+        "master_project_en": ("master_project",),
+        "actual_area": ("size_sqm",),
+        "no_of_prop": ("units_in_contract",),
+        "is_free_hold": ("freehold",),
+    },
 }
 
 # Used only when a file has neither the column nor any alias. A DLD export always
 # carries trans_group_en, so its mortgages and gifts are still left out of sales;
 # a file without the column is a sales-only extract, where every row is a sale.
-MISSING_COLUMN_DEFAULTS: dict[str, str] = {
-    "trans_group_en": "Sales",
+MISSING_COLUMN_DEFAULTS: dict[str, dict[str, str]] = {
+    "transactions": {"trans_group_en": "Sales"},
 }
+
+# A file without the business key (Ejari extracts carry no contract number) gets
+# a SHA-256 of the raw row as its key: the same row delivered twice gets the same
+# key, so deduplication and MERGE stay idempotent.
+CONTENT_KEY_PREFIX = "sha256:"
+
+
+def aliases_for(dataset: str) -> dict[str, tuple[str, ...]]:
+    return SOURCE_ALIASES.get(dataset, {})
+
+
+def defaults_for(dataset: str) -> dict[str, str]:
+    return MISSING_COLUMN_DEFAULTS.get(dataset, {})
 
 
 # --- parsing patterns ------------------------------------------------------------------
