@@ -411,6 +411,74 @@ def test_spark_and_python_normalisation_agree(spark):
 # --- rents ------------------------------------------------------------------------------------
 
 
+def ejari_contract(**overrides):
+    """A row from Daemon Data's Ejari extract as bronze stores it: snake_case, no contract id."""
+    row = {
+        "registration_date": "2026-10-05",
+        "start_date": "2026-10-10",
+        "end_date": "2027-10-09",
+        "version": "New",
+        "annual_amount_aed": "65000",
+        "contract_amount_aed": "65000",
+        "size_sqm": "73.1",
+        "units_in_contract": "1",
+        "area": "Marsa Dubai",
+        "project": "Marina Gate",
+        "master_project": "Dubai Marina",
+        "property_type": "Unit",
+        "property_sub_type": "Flat",
+        "usage": "Residential",
+        "freehold": "true",
+    }
+    row.update(overrides)
+    return row
+
+
+def test_an_ejari_extract_is_read_with_content_keys(spark):
+    frames = transform(
+        bronze_frame(
+            spark,
+            [
+                ejari_contract(),
+                ejari_contract(),  # the same contract delivered twice
+                ejari_contract(annual_amount_aed="98000", units_in_contract="3"),
+            ],
+        ),
+        "rents",
+    )
+    assert frames.quarantine.count() == 0
+    valid = frames.valid.collect()
+    assert len(valid) == 2  # the repeat collapses onto the same key
+    assert all(r["contract_id"].startswith(rules.CONTENT_KEY_PREFIX) for r in valid)
+    one = min(valid, key=lambda r: r["annual_rent_aed"])
+    assert one["annual_rent_aed"] == Decimal("65000.00")
+    assert one["contract_start_date"] == date(2026, 10, 10)
+    assert (one["ejari_property_type_en"], one["ejari_property_sub_type_en"]) == ("Unit", "Flat")
+    assert (one["property_usage_en"], one["contract_reg_type_en"]) == ("Residential", "New")
+    assert (one["project_name_en"], one["master_project_en"]) == ("Marina Gate", "Dubai Marina")
+    assert one["is_free_hold"] is True and one["is_multi_unit"] is False
+    assert one["area_name_en"] == "Marsa Dubai"
+    multi = max(valid, key=lambda r: r["annual_rent_aed"])
+    assert multi["is_multi_unit"] is True
+
+
+def test_content_keys_only_when_the_file_has_no_key(spark):
+    """A file with contract_id keeps it; a row with an empty id is still quarantined."""
+    frames = transform(bronze_frame(spark, [rent("C-1"), rent(None)]), "rents")
+    assert [r["contract_id"] for r in frames.valid.collect()] == ["C-1"]
+    assert frames.quarantine.count() == 1
+
+
+def test_aliases_belong_to_their_dataset(spark):
+    """property_sub_type is the Ejari sub-type in rents, and the sales sub-type in transactions."""
+    rents = transform(bronze_frame(spark, [ejari_contract()]), "rents").valid.first()
+    assert rents["ejari_property_sub_type_en"] == "Flat"
+    sales = transform(
+        bronze_frame(spark, [sale("S-1", property_sub_type="Villa")]), "transactions"
+    ).valid.first()
+    assert sales["property_sub_type_en"] == "Villa"
+
+
 def test_rents_are_annualised_typed_and_checked(spark):
     frames = transform(
         bronze_frame(

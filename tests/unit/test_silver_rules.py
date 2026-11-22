@@ -27,13 +27,30 @@ def test_field_names_are_unique_and_never_metadata(dataset):
     assert not any(n.startswith("_") for n in names)  # "_" is reserved for pipeline columns
 
 
-def test_source_aliases_rename_known_fields_without_shadowing_any():
-    field_names = {f.name for fields in rules.FIELDS.values() for f in fields}
-    aliases = [a for names in rules.SOURCE_ALIASES.values() for a in names]
-    assert set(rules.SOURCE_ALIASES) <= field_names
-    assert set(rules.MISSING_COLUMN_DEFAULTS) <= field_names
+@pytest.mark.parametrize("dataset", sorted(rules.FIELDS))
+def test_source_aliases_rename_known_fields_without_shadowing_any(dataset):
+    field_names = {f.name for f in rules.fields_for(dataset)}
+    aliases_by_field = rules.aliases_for(dataset)
+    aliases = [a for names in aliases_by_field.values() for a in names]
+    assert set(aliases_by_field) <= field_names
+    assert set(rules.defaults_for(dataset)) <= field_names
     assert len(aliases) == len(set(aliases)), "one source column feeds one field"
     assert not set(aliases) & field_names, "an alias must not hide a DLD column"
+
+
+def test_aliases_are_snake_case_as_bronze_stores_them():
+    """Bronze renames headers once (annualAmountAed -> annual_amount_aed); aliases use that form."""
+    from dubai_property.utils.naming import to_snake_case
+
+    for dataset in rules.SOURCE_ALIASES:
+        for names in rules.aliases_for(dataset).values():
+            assert all(to_snake_case(name) == name for name in names)
+
+
+def test_only_known_datasets_have_aliases_or_defaults():
+    assert set(rules.SOURCE_ALIASES) <= set(rules.FIELDS)
+    assert set(rules.MISSING_COLUMN_DEFAULTS) <= set(rules.FIELDS)
+    assert rules.aliases_for("unknown") == {} and rules.defaults_for("unknown") == {}
 
 
 @pytest.mark.parametrize(
