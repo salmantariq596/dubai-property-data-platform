@@ -264,6 +264,22 @@ def test_rental_yield_page_compares_like_with_like():
     assert "fact_sales[is_offplan] = FALSE ()" in price and "RentMonths" in price
 
 
+def test_every_page_credits_the_data_sources():
+    """Both datasets are CC BY 4.0: every published page must carry the attribution."""
+    for page in (REPORT / "pages").glob("*/page.json"):
+        texts = " ".join(
+            p.read_text(encoding="utf-8") for p in page.parent.glob("visuals/*/visual.json")
+        )
+        name = json.loads(page.read_text(encoding="utf-8"))["displayName"]
+        for credit in (
+            "Dubai Land Department",
+            "Dubai Real Estate Data",
+            "Daemon Data",
+            "CC BY 4.0",
+        ):
+            assert credit in texts, f"page {name!r} does not credit {credit}"
+
+
 def test_slicers_can_use_todays_area_name():
     columns = TABLES["dim_area"].columns
     assert columns["current_area_name_en"].expression

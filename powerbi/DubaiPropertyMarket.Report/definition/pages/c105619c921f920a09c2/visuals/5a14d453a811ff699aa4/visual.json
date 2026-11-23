@@ -19,7 +19,7 @@
               {
                 "textRuns": [
                   {
-                    "value": "Source: Dubai Land Department open data. Registered transactions; outliers excluded from medians. Latest month is preliminary.",
+                    "value": "Source: Dubai Land Department open data; sales via Dubai Real Estate Data, Ejari rents via Daemon Data (both CC BY 4.0). Registered transactions; prices per sqft for homes, outliers excluded. Latest month is preliminary.",
                     "textStyle": {
                       "fontSize": "10pt",
                       "color": "#52606D"
