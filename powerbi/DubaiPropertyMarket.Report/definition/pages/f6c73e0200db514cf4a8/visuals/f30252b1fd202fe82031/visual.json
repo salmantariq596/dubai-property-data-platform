@@ -51,16 +51,75 @@
                       "Entity": "fact_sales"
                     }
                   },
-                  "Property": "Median Sale Price AED"
+                  "Property": "Median Ready Sale Price AED"
                 }
               },
-              "queryRef": "fact_sales.Median Sale Price AED",
-              "nativeQueryRef": "Median Sale Price AED"
+              "queryRef": "fact_sales.Median Ready Sale Price AED",
+              "nativeQueryRef": "Median Ready Sale Price AED"
             }
           ]
         }
       }
     },
-    "drillFilterOtherVisuals": true
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "value": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "28D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "id": "default"
+          }
+        },
+        {
+          "properties": {
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "2L"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_rents.Median Annual Rent AED"
+          }
+        },
+        {
+          "properties": {
+            "labelPrecision": {
+              "expr": {
+                "Literal": {
+                  "Value": "2L"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_sales.Median Ready Sale Price AED"
+          }
+        }
+      ],
+      "layout": [
+        {
+          "properties": {
+            "alignment": {
+              "expr": {
+                "Literal": {
+                  "Value": "'middle'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

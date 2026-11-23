@@ -218,6 +218,52 @@ def test_dates_stop_today_on_every_page():
     assert '"Now"' in json.dumps(dates[0]["filter"])
 
 
+def _report_fields(node, found):
+    """Every (kind, table, name) a visual reads: {"Measure"|"Column": {Entity, Property}}."""
+    if isinstance(node, dict):
+        for kind in ("Measure", "Column"):
+            ref = node.get(kind)
+            if isinstance(ref, dict) and "Property" in ref:
+                entity = ref.get("Expression", {}).get("SourceRef", {}).get("Entity")
+                if entity:
+                    found.add((kind, entity, ref["Property"]))
+        for value in node.values():
+            _report_fields(value, found)
+    elif isinstance(node, list):
+        for value in node:
+            _report_fields(value, found)
+    return found
+
+
+VISUALS = sorted((REPORT / "pages").glob("*/visuals/*/visual.json"))
+
+
+@pytest.mark.parametrize("path", VISUALS, ids=lambda p: f"{p.parts[-4]}/{p.parts[-2]}")
+def test_visuals_use_fields_that_exist(path):
+    """A renamed measure or column breaks a visual silently until the report is opened."""
+    for kind, table, name in _report_fields(json.loads(path.read_text(encoding="utf-8")), set()):
+        assert table in TABLES, f"{path.parts[-2]}: unknown table {table}"
+        names = TABLES[table].measures if kind == "Measure" else TABLES[table].columns
+        assert name in names, f"{path.parts[-2]}: unknown {kind.lower()} {table}[{name}]"
+
+
+def test_rental_yield_page_compares_like_with_like():
+    """Next to the yield, the price shown is the one it uses: ready homes, months with rents."""
+    page = next(
+        p.parent
+        for p in (REPORT / "pages").glob("*/page.json")
+        if json.loads(p.read_text(encoding="utf-8"))["displayName"] == "Rental yield"
+    )
+    fields = set()
+    for path in page.glob("visuals/*/visual.json"):
+        _report_fields(json.loads(path.read_text(encoding="utf-8")), fields)
+    names = {name for _, _, name in fields}
+    assert "Median Ready Sale Price AED" in names
+    assert "Median Sale Price AED" not in names
+    price = TABLES["fact_sales"].measures["Median Ready Sale Price AED"]
+    assert "fact_sales[is_offplan] = FALSE ()" in price and "RentMonths" in price
+
+
 def test_slicers_can_use_todays_area_name():
     columns = TABLES["dim_area"].columns
     assert columns["current_area_name_en"].expression
