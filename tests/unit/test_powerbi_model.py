@@ -72,6 +72,10 @@ def test_dax_references_exist(where, dax):
         assert table in TABLES, f"{where}: unknown table {table}"
         assert column in TABLES[table].columns, f"{where}: unknown column {table}[{column}]"
     local = set(re.findall(r'"(\w+)",', dax))  # columns added in the expression (ADDCOLUMNS)
+    clashes = sorted(local & set(MEASURES))
+    assert not clashes, (
+        f"{where}: added columns {clashes} share a measure's name (ambiguous in DAX)"
+    )
     for measure in re.findall(r"(?<![\w\]])\[([^\]]+)\]", dax):
         assert measure in MEASURES or measure in local, f"{where}: unknown measure [{measure}]"
 
@@ -159,7 +163,7 @@ def test_gross_yield_compares_like_with_like():
     assert "CROSSJOIN ( Months, Types )" in yield_dax
     assert "VALUES ( dim_date[month_key] ), fact_rents" in yield_dax  # months with rents
     assert yield_dax.count("fact_sales[is_offplan] = FALSE ()") == 2  # price and count
-    assert "* [Contracts]" in yield_dax  # weighted by contracts
+    assert "* [CellContracts]" in yield_dax  # weighted by contracts
 
 
 def test_parquet_route_reads_only_the_newest_export():
