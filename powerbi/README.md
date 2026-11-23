@@ -31,7 +31,7 @@ Power BI Desktop is free (Windows). Double-click `DubaiPropertyMarket.pbip`, the
 Then **Close & Apply** and **Refresh**.
 
 - **Databricks:** sign in with a personal access token or Microsoft Entra ID when asked. This needs Power BI Desktop's Databricks connector: if **Get data** finds no "Databricks" source, use the Parquet export instead. The error *"We cannot convert the value null to type Function"* means the connector is missing.
-- **Parquet export:** run `notebooks/07_export_gold`. In **Catalog → `<catalog>` → gold → exports**, each table folder holds one `part-….parquet` file (plus small `_` files Power BI ignores). Download each `.parquet` file into a sub-folder of `GoldFolder` named after its table: `C:\dubai-gold\fact_sales\part-….parquet`, and so on for all seven. Keep the folder outside the repo.
+- **Parquet export:** run `notebooks/07_export_gold`. In **Catalog → `<catalog>` → gold → exports**, each table folder holds one `part-….parquet` file (plus small `_` files Power BI ignores). Download each `.parquet` file into a sub-folder of `GoldFolder` named after its table: `C:\dubai-gold\fact_sales\part-….parquet`, and so on for all seven. Keep the folder outside the repo. After a new export, replace the old files; if a folder holds several, the report reads only the newest (by date modified).
 - **Sample data:** `python tools/make_sample_gold.py` writes synthetic gold tables to `data/sample_gold/` (git-ignored). It is for building and checking the report before real data exists. **Every number in it is invented: never publish screenshots, PDFs or insights made from it.**
 
 ## Change the report or model

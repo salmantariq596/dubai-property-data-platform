@@ -41,7 +41,10 @@ expression GoldTable =
 		        let
 		            Files = Folder.Files(GoldFolder & "\" & table_name),
 		            ParquetFiles = Table.SelectRows(Files, each [Extension] = ".parquet"),
-		            Result = Table.Combine(List.Transform(ParquetFiles[Content], each Parquet.Document(_)))
+		            // The export writes one file per table. Read only the newest, so a
+		            // re-download next to an old file does not double the rows.
+		            Newest = Table.FirstN(Table.Sort(ParquetFiles, {{"Date modified", Order.Descending}}), 1),
+		            Result = Parquet.Document(Newest{0}[Content])
 		        in
 		            Result
 		in

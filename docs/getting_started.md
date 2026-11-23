@@ -103,7 +103,7 @@ Open `powerbi/DubaiPropertyMarket.pbip` in Power BI Desktop. The report reads th
 
 **Parquet export: works everywhere, used for this walkthrough.**
 1. In Databricks, run `notebooks/07_export_gold`. It prints the rows per table.
-2. **Catalog → dubai → gold → Volumes → exports**: each table folder holds one `part-….parquet` file. Download each into a folder named after its table, outside the repo:
+2. **Catalog → dubai → gold → Volumes → exports**: each table folder holds one `part-….parquet` file. Download each into a folder named after its table, outside the repo. When you export again, **replace** the old file rather than adding the new one next to it; the report reads only the newest file in each folder, but old files only cause confusion:
 
    ```powershell
    "agg_area_monthly","dim_area","dim_date","dim_project","dim_property_type","fact_rents","fact_sales" | ForEach-Object { New-Item -ItemType Directory -Force -Path "C:\dubai-gold\$_" }
