@@ -144,6 +144,31 @@ def test_offplan_premium_compares_like_with_like():
     assert "* [Weight]" in premium  # weighted by off-plan sales
 
 
+@pytest.mark.parametrize("measure", ["Priced Contracts", "Median Annual Rent AED"])
+def test_rents_are_for_homes_only(measure):
+    """The sale side of the yield is homes only; the rent side must match it."""
+    dax = TABLES["fact_rents"].measures[measure]
+    assert 'KEEPFILTERS ( fact_rents[property_usage_en] = "Residential" )' in dax
+    assert HOMES[1] in dax
+
+
+def test_gross_yield_compares_like_with_like():
+    """Rent and sale price from the same month and property type, ready sales only:
+    off-plan homes cannot be let, and sales from other years distort the price."""
+    yield_dax = TABLES["fact_rents"].measures["Gross Yield %"]
+    assert "CROSSJOIN ( Months, Types )" in yield_dax
+    assert "VALUES ( dim_date[month_key] ), fact_rents" in yield_dax  # months with rents
+    assert yield_dax.count("fact_sales[is_offplan] = FALSE ()") == 2  # price and count
+    assert "* [Contracts]" in yield_dax  # weighted by contracts
+
+
+def test_parquet_route_reads_only_the_newest_export():
+    """A re-download next to an old export file must not double the rows."""
+    text = (MODEL / "expressions.tmdl").read_text(encoding="utf-8")
+    assert '"Date modified", Order.Descending' in text
+    assert "Table.Combine" not in text
+
+
 def test_parameter_defaults_are_not_machine_specific():
     text = (MODEL / "expressions.tmdl").read_text(encoding="utf-8")
     folder = re.search(r'expression GoldFolder = "([^"]*)"', text).group(1)

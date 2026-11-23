@@ -68,8 +68,8 @@ All in the model (`powerbi/model/definition/tables/fact_*.tmdl`), with the same 
 | `Off-plan Sales`, `Off-plan Share` | Off-plan count, and its share of all sales |
 | `Median Price per Sqft Off-plan` / `Ready` | Medians per registration type (homes only), blank below 20 priced sales so thin months don't spike the chart |
 | `Off-plan Premium %` | Like for like: over the last 12 months, the off-plan premium within each property type (apartments vs apartments, villas vs villas), weighted by off-plan sales. Over all years, ready sales reach back to 2000 while off-plan sales cluster in recent, pricier years, and off-plan is mostly apartments while ready includes cheaper villas; a plain gap between the two medians showed 64% overall and over 900% in single areas |
-| `Contracts`, `Median Annual Rent AED` | Contract count, and median rent over single-unit contracts |
-| `Gross Yield %` | Median rent / median sale price; blank unless `Priced Sales` and `Priced Contracts` are both at least 10 |
+| `Contracts`, `Median Annual Rent AED`, `Priced Contracts` | Contract count, and median rent over single-unit contracts for homes (residential apartments and villas), matching the sale side |
+| `Gross Yield %` | Like for like: for each month with rents and each property type (apartments, villas), median annual rent / median **ready** sale price, kept only where both sides have at least 10 records, then averaged weighted by contracts. Off-plan homes cannot be let, and a sale median over other years distorts the price: a plain rent / all-years price ratio showed up to 14.6% in single areas |
 | `Price Growth % (50+ sales)` | `Median Price per Sqft YoY %`, blank unless both 12-month periods have at least 50 priced sales: keeps tiny areas off the "fastest risers" chart |
 | `Off-plan Premium % (20+ off-plan)` | Off-plan premium, blank below 20 off-plan sales |
 | `Area (Arabic)` | The area's Arabic name, for tooltips |

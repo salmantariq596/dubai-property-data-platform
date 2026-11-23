@@ -6,21 +6,22 @@ table fact_rents
 		displayFolder: Rents
 		lineageTag: 69524cff-ee36-4a7b-9df4-10cf6140ef04
 
-	measure 'Priced Contracts' = CALCULATE ( COUNTROWS ( fact_rents ), fact_rents[is_multi_unit] = FALSE (), NOT ISBLANK ( fact_rents[annual_rent_aed] ) )
+	measure 'Priced Contracts' = CALCULATE ( COUNTROWS ( fact_rents ), fact_rents[is_multi_unit] = FALSE (), NOT ISBLANK ( fact_rents[annual_rent_aed] ), KEEPFILTERS ( fact_rents[property_usage_en] = "Residential" ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
 		formatString: #,0
 		displayFolder: Rents
 		lineageTag: 3b08eb5d-f030-4f93-829c-64ca40904318
 
-	measure 'Median Annual Rent AED' = CALCULATE ( MEDIAN ( fact_rents[annual_rent_aed] ), fact_rents[is_multi_unit] = FALSE () )
+	measure 'Median Annual Rent AED' = CALCULATE ( MEDIAN ( fact_rents[annual_rent_aed] ), fact_rents[is_multi_unit] = FALSE (), KEEPFILTERS ( fact_rents[property_usage_en] = "Residential" ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
 		formatString: #,0
 		displayFolder: Rents
 		lineageTag: 23e45abb-41f8-4a09-acbf-250c41557537
 
 	measure 'Gross Yield %' =
-			VAR Rent = [Median Annual Rent AED]
-			VAR Price = [Median Sale Price AED]
-			VAR Enough = [Priced Sales] >= 10 && [Priced Contracts] >= 10
-			RETURN IF ( Enough, DIVIDE ( Rent, Price ) )
+			VAR Months = CALCULATETABLE ( VALUES ( dim_date[month_key] ), fact_rents )
+			VAR Types = CALCULATETABLE ( VALUES ( dim_property_type[property_type] ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
+			VAR Cells = ADDCOLUMNS ( CROSSJOIN ( Months, Types ), "Rent", [Median Annual Rent AED], "Price", CALCULATE ( [Median Sale Price AED], fact_sales[is_offplan] = FALSE () ), "Contracts", [Priced Contracts], "ReadySales", CALCULATE ( [Priced Sales], fact_sales[is_offplan] = FALSE () ) )
+			VAR Compared = FILTER ( Cells, [Contracts] >= 10 && [ReadySales] >= 10 && [Price] > 0 )
+			RETURN DIVIDE ( SUMX ( Compared, [Rent] / [Price] * [Contracts] ), SUMX ( Compared, [Contracts] ) )
 		formatString: 0.00%
 		displayFolder: Yield
 		lineageTag: 58078a78-60bf-4b89-8add-d2da6a90f8f3
