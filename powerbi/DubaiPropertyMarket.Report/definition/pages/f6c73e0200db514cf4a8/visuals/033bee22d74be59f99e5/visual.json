@@ -19,7 +19,7 @@
               {
                 "textRuns": [
                   {
-                    "value": "Gross yield = median annual rent / median sale price for the same area, type and period, shown only when each side has at least 10 records. Before service charges, vacancy and fees.",
+                    "value": "Gross yield = median annual rent / median ready sale price for the same area, property type and month, shown only when each side has at least 10 records. Before service charges, vacancy and fees.",
                     "textStyle": {
                       "fontSize": "12pt",
                       "color": "#52606D"
