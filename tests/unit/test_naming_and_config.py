@@ -1,7 +1,10 @@
+import re
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
+import dubai_property
 from dubai_property.bronze import load_log
 from dubai_property.config import DATASETS, BronzeSettings, get_dataset
 from dubai_property.utils.naming import sanitize_column_names, to_snake_case
@@ -104,3 +107,10 @@ def test_load_log_truncates_long_errors_and_rejects_bad_status():
 def test_file_status():
     assert load_log.file_status(10, 10) == load_log.SUCCESS
     assert load_log.file_status(10, 9) == load_log.MISMATCH
+
+
+def test_package_version_matches_pyproject():
+    """One version everywhere: the tag, pyproject.toml and the package."""
+    pyproject = (Path(__file__).parents[2] / "pyproject.toml").read_text(encoding="utf-8")
+    version = re.search(r'^version = "([^"]+)"$', pyproject, re.M).group(1)
+    assert dubai_property.__version__ == version
