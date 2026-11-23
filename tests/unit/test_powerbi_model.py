@@ -80,6 +80,36 @@ def test_dax_references_exist(where, dax):
         assert measure in MEASURES or measure in local, f"{where}: unknown measure [{measure}]"
 
 
+# Words the DAX engine reserves: as variable names they fail to parse ("The syntax for
+# 'Cells' is incorrect"). Keywords, plus function names that collide.
+DAX_RESERVED = {
+    "CELLS",
+    "COLUMN",
+    "DEFINE",
+    "EVALUATE",
+    "MEASURE",
+    "ORDER",
+    "RETURN",
+    "START",
+    "TABLE",
+    "VAR",
+    "WINDOW",
+    "DATE",
+    "FILTER",
+    "VALUES",
+    "YEAR",
+    "MONTH",
+    "DAY",
+}
+
+
+@pytest.mark.parametrize(("where", "dax"), list(_dax()), ids=lambda v: str(v)[:40])
+def test_dax_variables_avoid_reserved_words(where, dax):
+    names = re.findall(r"\bVAR (\w+)", dax)
+    reserved = sorted(n for n in names if n.upper() in DAX_RESERVED)
+    assert not reserved, f"{where}: variables named after reserved words: {reserved}"
+
+
 def test_the_plan_measures_exist():
     """Phase 7: median price per sqft, YoY change, sales volume, gross yield."""
     assert {
@@ -160,7 +190,7 @@ def test_gross_yield_compares_like_with_like():
     """Rent and sale price from the same month and property type, ready sales only:
     off-plan homes cannot be let, and sales from other years distort the price."""
     yield_dax = TABLES["fact_rents"].measures["Gross Yield %"]
-    assert "CROSSJOIN ( Months, Types )" in yield_dax
+    assert "CROSSJOIN ( RentMonths, HomeTypes )" in yield_dax
     assert "VALUES ( dim_date[month_key] ), fact_rents" in yield_dax  # months with rents
     assert yield_dax.count("fact_sales[is_offplan] = FALSE ()") == 2  # price and count
     assert "* [CellContracts]" in yield_dax  # weighted by contracts

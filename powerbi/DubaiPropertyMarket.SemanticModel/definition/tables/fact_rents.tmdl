@@ -17,11 +17,11 @@ table fact_rents
 		lineageTag: 23e45abb-41f8-4a09-acbf-250c41557537
 
 	measure 'Gross Yield %' =
-			VAR Months = CALCULATETABLE ( VALUES ( dim_date[month_key] ), fact_rents )
-			VAR Types = CALCULATETABLE ( VALUES ( dim_property_type[property_type] ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
-			VAR Cells = ADDCOLUMNS ( CROSSJOIN ( Months, Types ), "CellRent", [Median Annual Rent AED], "CellPrice", CALCULATE ( [Median Sale Price AED], fact_sales[is_offplan] = FALSE () ), "CellContracts", [Priced Contracts], "CellReadySales", CALCULATE ( [Priced Sales], fact_sales[is_offplan] = FALSE () ) )
-			VAR Compared = FILTER ( Cells, [CellContracts] >= 10 && [CellReadySales] >= 10 && [CellPrice] > 0 )
-			RETURN DIVIDE ( SUMX ( Compared, [CellRent] / [CellPrice] * [CellContracts] ), SUMX ( Compared, [CellContracts] ) )
+			VAR RentMonths = CALCULATETABLE ( VALUES ( dim_date[month_key] ), fact_rents )
+			VAR HomeTypes = CALCULATETABLE ( VALUES ( dim_property_type[property_type] ), KEEPFILTERS ( dim_property_type[property_type] IN { "Unit", "Villa" } ) )
+			VAR YieldGrid = ADDCOLUMNS ( CROSSJOIN ( RentMonths, HomeTypes ), "CellRent", [Median Annual Rent AED], "CellPrice", CALCULATE ( [Median Sale Price AED], fact_sales[is_offplan] = FALSE () ), "CellContracts", [Priced Contracts], "CellReadySales", CALCULATE ( [Priced Sales], fact_sales[is_offplan] = FALSE () ) )
+			VAR Comparable = FILTER ( YieldGrid, [CellContracts] >= 10 && [CellReadySales] >= 10 && [CellPrice] > 0 )
+			RETURN DIVIDE ( SUMX ( Comparable, [CellRent] / [CellPrice] * [CellContracts] ), SUMX ( Comparable, [CellContracts] ) )
 		formatString: 0.00%
 		displayFolder: Yield
 		lineageTag: 58078a78-60bf-4b89-8add-d2da6a90f8f3
