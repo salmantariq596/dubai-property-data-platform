@@ -340,7 +340,7 @@ def _cell(agg, month_key, type_sk):
 
 def test_monthly_medians_counts_and_yield(spark):
     fact_sales, fact_rents, m = _market(spark)
-    agg = facts.build_agg_area_monthly(fact_sales, fact_rents, m["dim_area"], min_records=3)
+    agg = facts.build_agg_area_monthly(fact_sales, fact_rents, m["dim_area"], min_records=2)
     flat_sk = fact_rents.first()["property_type_sk"]
     row = _cell(agg, 202401, flat_sk)
 
@@ -356,7 +356,8 @@ def test_monthly_medians_counts_and_yield(spark):
     assert row["median_sale_price_aed"] == pytest.approx(1_500_000)
     assert (row["rent_count"], row["priced_rent_count"]) == (4, 3)  # multi-unit left out
     assert row["median_annual_rent_aed"] == pytest.approx(100_000)
-    assert row["gross_yield_pct"] == pytest.approx(100_000 / 1_500_000 * 100, abs=0.01)
+    # Yield against ready sales only (A and B): the off-plan sale C cannot be let.
+    assert row["gross_yield_pct"] == pytest.approx(100_000 / 1_250_000 * 100, abs=0.01)
     assert row["area_name_en"] == "Business Bay"
     assert row["month_start"] == date(2024, 1, 1)
 
@@ -367,6 +368,15 @@ def test_yield_is_withheld_below_the_minimum_sample(spark):
     row = _cell(agg, 202401, fact_rents.first()["property_type_sk"])
     assert row["gross_yield_pct"] is None
     assert row["median_price_per_sqft"] is not None  # medians are still reported
+
+
+def test_yield_needs_enough_ready_sales(spark):
+    """Three priced sales but only two ready ones: below a minimum of three, no yield."""
+    fact_sales, fact_rents, m = _market(spark)
+    agg = facts.build_agg_area_monthly(fact_sales, fact_rents, m["dim_area"], min_records=3)
+    row = _cell(agg, 202401, fact_rents.first()["property_type_sk"])
+    assert row["priced_sales_count"] == 3
+    assert row["gross_yield_pct"] is None
 
 
 def test_year_on_year_change_and_all_types_rollup(spark):
@@ -382,4 +392,5 @@ def test_year_on_year_change_and_all_types_rollup(spark):
     everything = _cell(agg, 202401, rules.ALL_TYPES_SK)
     assert everything["sales_count"] == 5  # four flats and a villa
     assert everything["rent_count"] == 4
+    assert everything["gross_yield_pct"] is None  # apartment rents against villa prices
     assert set(agg.columns) == set(facts.AGG_COLUMNS)

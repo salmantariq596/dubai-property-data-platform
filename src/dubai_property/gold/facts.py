@@ -220,9 +220,13 @@ def build_agg_area_monthly(
     """Medians per area, property type and month, and gross rental yield.
 
     Medians leave out flagged outliers (sales) and multi-unit contracts (rents),
-    which would distort them. Counts include every row.
+    which would distort them. Counts include every row. Gross yield compares like
+    with like: rents against ready sales (off-plan homes cannot be let) of the
+    same area, property type and month, and is not given for the "All types" row,
+    which would set apartment rents against villa prices.
     """
     priced = ~F.col("is_outlier") & F.col("price_per_sqft").isNotNull()
+    ready = priced & (F.col("is_offplan") == F.lit(False))
     sales = _with_all_types(
         _by_month(fact_sales),
         [
@@ -232,6 +236,8 @@ def build_agg_area_monthly(
             F.sum(F.when(priced, 1).otherwise(0)).alias("priced_sales_count"),
             F.median(F.when(priced, F.col("price_per_sqft"))).alias("median_price_per_sqft"),
             F.median(F.when(priced, F.col("value_aed"))).alias("median_sale_price_aed"),
+            F.sum(F.when(ready, 1).otherwise(0)).alias("__ready_sales"),
+            F.median(F.when(ready, F.col("value_aed"))).alias("__ready_price"),
         ],
     )
 
@@ -253,14 +259,15 @@ def build_agg_area_monthly(
     counts += ["rent_count", "priced_rent_count"]
     joined = joined.withColumns({c: F.coalesce(F.col(c), F.lit(0)).cast("long") for c in counts})
 
-    enough = (F.col("priced_sales_count") >= min_records) & (
+    enough = (F.coalesce(F.col("__ready_sales"), F.lit(0)) >= min_records) & (
         F.col("priced_rent_count") >= min_records
     )
+    one_type = F.col("property_type_sk") != F.lit(rules.ALL_TYPES_SK)
     joined = joined.withColumn(
         "gross_yield_pct",
         F.when(
-            enough & (F.col("median_sale_price_aed") > 0),
-            F.round(F.col("median_annual_rent_aed") / F.col("median_sale_price_aed") * 100, 2),
+            enough & one_type & (F.col("__ready_price") > 0),
+            F.round(F.col("median_annual_rent_aed") / F.col("__ready_price") * 100, 2),
         ),
     )
 
