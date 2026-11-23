@@ -31,6 +31,13 @@ table fact_sales
 		displayFolder: Prices
 		lineageTag: 28fafbc1-d7b2-4934-9677-4b588d4141b6
 
+	measure 'Median Ready Sale Price AED' =
+			VAR RentMonths = CALCULATETABLE ( VALUES ( dim_date[month_key] ), fact_rents )
+			RETURN CALCULATE ( [Median Sale Price AED], fact_sales[is_offplan] = FALSE (), RentMonths )
+		formatString: #,0
+		displayFolder: Yield
+		lineageTag: 7d186c72-7a16-4e98-aefd-bfecfb4a76ea
+
 	measure 'Median Price per Sqft LY' = IF ( [Priced Sales] > 0, CALCULATE ( [Median Price per Sqft], SAMEPERIODLASTYEAR ( dim_date[date] ) ) )
 		formatString: #,0
 		displayFolder: Prices

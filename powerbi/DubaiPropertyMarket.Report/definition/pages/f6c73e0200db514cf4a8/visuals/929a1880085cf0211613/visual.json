@@ -61,11 +61,11 @@
                       "Entity": "fact_sales"
                     }
                   },
-                  "Property": "Median Sale Price AED"
+                  "Property": "Median Ready Sale Price AED"
                 }
               },
-              "queryRef": "fact_sales.Median Sale Price AED",
-              "nativeQueryRef": "Median Sale Price AED",
+              "queryRef": "fact_sales.Median Ready Sale Price AED",
+              "nativeQueryRef": "Median Ready Sale Price AED",
               "active": true
             }
           ]
