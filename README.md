@@ -55,7 +55,7 @@ A failed check stops the run before the next layer, so the dashboard keeps the l
 | Full-history run | About 4 minutes, bronze to gold with every check, on Databricks Free Edition (serverless); a re-run with nothing new takes about 1 minute |
 | Daily run on Azure | _ minutes, about _ USD |
 | Query time after `OPTIMIZE` + liquid clustering | _ % faster ([performance](docs/performance.md)) |
-| Tests | 514: 423 unit, 91 Spark and integration, 98% coverage, all in CI |
+| Tests | 515: 424 unit, 91 Spark and integration, 98% coverage, all in CI |
 | Data quality checks | 25 between the layers, every result recorded |
 | Infrastructure | 5 Terraform stacks, 0 secrets |
 
