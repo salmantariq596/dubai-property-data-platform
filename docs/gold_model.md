@@ -112,7 +112,7 @@ Facts join the version **valid on their own date**. A sale from January 2024 kee
 | Median price per sqft | Median of `price_per_sqft`, outliers excluded | `agg_area_monthly.median_price_per_sqft` |
 | YoY change | This month's median price per sqft vs the same month a year earlier, % | `median_price_per_sqft_yoy_pct` |
 | Median annual rent | Median of `annual_rent_aed`, multi-unit contracts excluded | `median_annual_rent_aed` |
-| Gross rental yield | Median annual rent / median sale price × 100, same area, type and month; only when both rest on at least 10 records | `gross_yield_pct` |
+| Gross rental yield | Median annual rent / median **ready** sale price × 100, same area, type and month (off-plan homes cannot be let); only when both rest on at least 10 records; not given for the "All types" row, which would set apartment rents against villa prices | `gross_yield_pct` |
 | Off-plan share | `offplan_sales_count / sales_count` | computed in Power BI |
 | Sales volume and value | `sales_count`, `sales_value_aed` (outliers included) | `agg_area_monthly`, `fact_sales` |
 
