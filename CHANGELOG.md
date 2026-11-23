@@ -2,18 +2,51 @@
 
 Each module is merged with a pull request and tagged.
 
-## [Unreleased] — Testing from a fresh clone, on Databricks Free Edition and on real data
+## [v0.6.0] — Module 6 complete: the platform end to end on real data — 2026-11-23
 
-### Fixed
-- `make setup` now installs `pyarrow`, which `tools/make_sample_gold.py` needs; CI runs the script after a clean install.
-- `notebooks/06_run_pipeline`: the `datasets` widget failed on Databricks (a multiselect default must be one of its choices). It is now a text widget, and `tests/unit/test_notebooks.py` checks every notebook's widget defaults.
-- Bronze ran `REFRESH TABLE`, which serverless compute rejects; it is now only used for the Parquet tables of local tests. `tests/unit/test_serverless.py` scans `src/` and `notebooks/` for APIs serverless rejects.
-- ruff pinned to one version in pre-commit and the dev dependencies, so local formatting and CI agree.
-- `dld-profile` crashed on real data: free-format date parsing read a building named `1-1-2` as year 1. Dates are now parsed only in the two layouts silver accepts, within pandas' range.
+The repo was run from a fresh clone, on Databricks Free Edition, against real DLD data:
+- 1,382,848 registered sales (Dubai Real Estate Data's export);
+- 95,561 Ejari contracts (Daemon Data's extract);
+
+both CC BY 4.0. Bronze to gold took about 4 minutes, a re-run changes nothing, and the dashboard's four pages give figures that agree with the publishers' own. Everything below was found that way; each fix has a test.
 
 ### Added
-- Silver reads DLD data redistributed under other column names (`SOURCE_ALIASES`), and treats a file without `trans_group_en` as a sales-only extract (`MISSING_COLUMN_DEFAULTS`). Bedroom counts given as bare numbers (`0` = studio) are read too.
-- First real data: 1,382,848 DLD sales (1975 to 2 November 2026) from Dubai Real Estate Data on Kaggle, CC BY 4.0, because Dubai Pulse is unreachable from outside the UAE. Source, license, attribution and checksum in `docs/data_sources.md`; profile in `docs/profiles/transactions.md`.
+- `docs/getting_started.md`: from a fresh clone to the dashboard on real data, with what each step should print and a troubleshooting table.
+- Dashboard on real data: screenshots in `docs/img/`, `powerbi/DubaiPropertyMarket.pdf`, and three insights in `docs/dashboard.md`.
+- **Real data from other publishers:**
+  - silver reads DLD data redistributed under other column names (`SOURCE_ALIASES`, per dataset);
+  - a file without `trans_group_en` is treated as a sales-only extract;
+  - a file without a business key (Ejari has no contract number) gets a SHA-256 of the raw row as its key;
+  - bedroom counts given as bare numbers are read.
+- Sources, licenses, attribution and checksums in `docs/data_sources.md`; real-data profile in `docs/profiles/transactions.md`. Dubai Pulse is unreachable from outside the UAE.
+- **Tests:**
+  - every notebook widget default is one of its choices;
+  - no API that serverless rejects;
+  - every field a report visual reads exists in the model;
+  - DAX variables avoid reserved words, and added columns never share a measure's name;
+  - every report page credits the data sources;
+  - the relative date filter is in place.
+
+### Fixed
+- **Repo and Databricks:**
+  - `make setup` installs `pyarrow`;
+  - `06_run_pipeline`'s `datasets` widget failed on Databricks;
+  - bronze ran `REFRESH TABLE`, which serverless rejects;
+  - ruff is pinned to one version, so pre-commit and CI agree;
+  - `dld-profile` crashed when a building name looked like a date.
+- **Prices:** price-per-sqft and price medians cover homes only (residential apartments and villas). Land, whole buildings, shops and offices distorted them.
+- **Growth:** the last 12 months against the 12 before. Same period last year over all years compared almost the same years.
+- **Off-plan premium:** like for like, per property type over the last 12 months: 25.6%, not 64%.
+- **Gross yield**, in Power BI and in gold's `agg_area_monthly`: rents against **ready** sales of the same area, property type and month, homes only, 10+ records each side, no yield on the "All types" row. The page shows the ready sale price it divides by.
+- **Report:**
+  - lines and medians blank in months without enough sales;
+  - dates stop today on every page;
+  - KPI cards show two decimal places;
+  - the year axis ends with the data;
+  - the footer credits both CC BY sources.
+- **Power BI Parquet route:**
+  - reads only the newest export file in each folder;
+  - `GoldFolder` no longer defaults to a path on one machine.
 
 ## [Unreleased] — Module 10: Documentation and launch
 
@@ -27,7 +60,7 @@ Each module is merged with a pull request and tagged.
 - `tests/unit/test_docs.py`: every relative link in every Markdown file resolves, and every ADR is linked from the README (32 tests).
 
 ### To do before v1.0.0
-- Fill the `_` figures, screenshots and three insights from the full-history run; record the demo video.
+- Fill the `_` figures that need the Azure deployment (daily run time and cost, query speed-up); record the demo video.
 
 ## [Unreleased] — Module 9: CI/CD, monitoring and cost (code ready, setup pending)
 

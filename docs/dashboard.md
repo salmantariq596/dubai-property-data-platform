@@ -79,16 +79,61 @@ All in the model (`powerbi/model/definition/tables/fact_*.tmdl`), with the same 
 
 ## Checklist before export
 
-- [ ] Every number comes from a measure, never an implicit sum (the model discourages implicit measures)
-- [ ] Slicers synced across all four pages
-- [ ] Arabic tooltip set on every area visual
-- [ ] Footer note on every page
-- [ ] Latest month marked preliminary (or filtered out of trend charts)
+- [x] Every number comes from a measure, never an implicit sum (the model discourages implicit measures)
+- [x] Slicers synced across all four pages
+- [x] Arabic tooltip set on every area visual
+- [x] Footer note on every page, with the CC BY 4.0 credits
+- [x] Latest month marked preliminary
+- [x] Dates up to today on every page; cards with two decimal places
+- [x] PDF and screenshots made from real data only
 
 ## Insights
 
-The plan's checkpoint: three real insights, with numbers, from the built dashboard. To be written once it runs on real DLD data.
+From the dashboard on real data: 1,380,586 registered DLD sales dated 2000 to 2 November 2026 (Dubai Real Estate Data's export) and 95,561 Ejari contracts registered in October 2026 (Daemon Data's extract), both CC BY 4.0. Prices per sqft and rents are for homes, meaning residential apartments and villas, with outliers excluded. Every figure below can be read off the report ([PDF](../powerbi/DubaiPropertyMarket.pdf)).
 
-1. _
-2. _
-3. _
+### 1. Activity cooled; prices kept rising
+
+| Year | Registered sales | Off-plan share |
+|---|---:|---:|
+| 2020 | 33,102 | 44% |
+| 2021 | 59,424 | 39% |
+| 2023 | 131,801 | 51% |
+| 2025 | 214,803 | 63% |
+| 2026 (to 2 November) | 136,035 | 67% |
+
+Sales grew six and a half times from 2020 to 2025. From 1 January to 2 November 2026 there were 23% fewer than in the same period of 2025 (136,035 against 176,781). Prices did not follow: the median price per sqft of homes over the last 12 months was 1,738 AED, 5.6% above the 12 months before (1,646 AED). Off-plan sales kept gaining share, from 39% in 2021 to 67% in 2026.
+
+*Caveats:* the latest weeks are incomplete because registrations arrive late, and this is one snapshot of a redistributed copy of the register.
+
+### 2. Off-plan costs about a quarter more than ready, not two thirds
+
+| Last 12 months | Off-plan | Ready | Premium |
+|---|---:|---:|---:|
+| Apartments, AED per sqft | 1,803 | 1,434 | +25.7% |
+| Villas, AED per sqft | 1,822 | 1,480 | +23.1% |
+| Weighted by off-plan sales | | | **+25.6%** |
+
+A plain comparison of every off-plan sale with every ready sale says +64%. Most of that gap is mix: ready sales reach back to 2000, when prices were far lower, and include more villas, which are cheaper per sqft. The premium that remains buys a new building and a payment plan, so it is not pure overpricing. In single areas it can still exceed 100% where off-plan means new luxury towers and ready means older stock.
+
+### 3. Yields fall as prices rise: from 10.5% to 3.5%
+
+| Area (DLD name) | Known as | Gross yield, October 2026 |
+|---|---|---:|
+| Me'Aisem First | Dubai Production City | 10.5% |
+| Al Barsha South Fourth | Jumeirah Village Circle | 6.7% |
+| Burj Khalifa | Downtown Dubai | 5.8% |
+| Marsa Dubai | Dubai Marina | 5.25% |
+| Palm Jumeirah | Palm Jumeirah | 3.5% |
+| **Citywide** | | **5.3%** |
+
+The median home rent was AED 69,458 a year and the median ready home price AED 1.24 million. Yields are highest where homes are cheapest. Each area's yield sets its median rent against its median ready sale price for the same property type and month, using only cells with at least 10 contracts and 10 ready sales.
+
+*Caveats:* these are gross yields, before service charges, vacancy and fees, and they rest on one month of rents.
+
+### A note on single-area growth figures
+
+The "fastest-rising areas" chart is led by Al Safouh First at +146%. Its median price per sqft went from 1,514 to 3,722 AED on 100 sales a year earlier and 563 since. A jump like that more likely reflects a change in *what* sold, such as a luxury launch, than a change in what existing homes are worth. The chart shows areas with at least 50 sales in both years; read single-area figures alongside their sales counts.
+
+### Area names
+
+DLD names areas by cadastral district, not by the names used in marketing. The register's own mapping includes Marsa Dubai = Dubai Marina, Al Barsha South Fourth = Jumeirah Village Circle and Burj Khalifa = Downtown Dubai. The dashboard keeps DLD's names, so every figure can be traced back to the register.
