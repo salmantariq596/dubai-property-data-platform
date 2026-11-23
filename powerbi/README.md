@@ -8,7 +8,7 @@ The dashboard reads only the gold tables. It is a Power BI Project (`.pbip`): th
 | `DubaiPropertyMarket.SemanticModel/` | The model (TMDL): 7 gold tables, 11 relationships, 20 DAX measures, connection parameters |
 | `DubaiPropertyMarket.Report/` | The four report pages |
 | `theme/dubai-market.json` | Colours and fonts |
-| *(to add)* `DubaiPropertyMarket.pdf` | PDF export, made from real data |
+| `DubaiPropertyMarket.pdf` | PDF export of the four pages, made from real data |
 
 Page designs: [docs/dashboard.md](../docs/dashboard.md). Design decisions: [ADR 0006](../docs/adr/0006-power-bi-model.md).
 
@@ -43,7 +43,7 @@ Then **Close & Apply** and **Refresh**.
 
 ## Publish
 
-Once real data is loaded:
+Done for v0.6.0 on real data; repeat after a significant data refresh:
 
 1. **File → Export → Export to PDF** → `powerbi/DubaiPropertyMarket.pdf`.
 2. Screenshot each page into `docs/img/dashboard-<page>.png` for the README.

@@ -6,17 +6,26 @@
 
 **The question it answers:** *Where in Dubai are prices rising fastest, what does a square foot cost by area and property type, and what rental yield can an investor expect?*
 
-> **Status:** all ten modules are built, tested and merged. The platform is being deployed to Azure and run on the full DLD history. Figures shown as `_` are filled in from that run, never estimated.
+> **Status:** all ten modules are built, tested and merged, and the pipeline and dashboard run end to end on real DLD data (1.38 million sales, 95,561 rent contracts) on Databricks Free Edition. The Azure deployment is next; figures that need it are shown as `_`, never estimated.
 
 ## Demo
 
 | | |
 |---|---|
-| 🎥 3-minute demo | _link after the first production run_ |
-| 📊 Dashboard | 4 pages: Market overview · Area deep-dive · Off-plan vs ready · Rental yield ([design](docs/dashboard.md)) |
-| 📄 PDF export | `powerbi/DubaiPropertyMarket.pdf` (after the real-data run) |
+| 📊 Dashboard | 4 pages on real data: [Market overview](docs/img/dashboard-market-overview.png) · [Area deep-dive](docs/img/dashboard-area-deep-dive.png) · [Off-plan vs ready](docs/img/dashboard-offplan-vs-ready.png) · [Rental yield](docs/img/dashboard-rental-yield.png) ([design](docs/dashboard.md)) |
+| 📄 PDF export | [DubaiPropertyMarket.pdf](powerbi/DubaiPropertyMarket.pdf) |
+| 🎥 3-minute demo | _after the Azure deployment_ |
 
-*Screenshots go here after the real-data run. Until then the report runs on synthetic sample data, which is never published.*
+![Market overview: 1.38M registered sales, median 1,310 AED per sqft for homes, up 5.6% in the last 12 months](docs/img/dashboard-market-overview.png)
+
+<details>
+<summary>The other three pages</summary>
+
+![Area deep-dive](docs/img/dashboard-area-deep-dive.png)
+![Off-plan vs ready](docs/img/dashboard-offplan-vs-ready.png)
+![Rental yield](docs/img/dashboard-rental-yield.png)
+
+</details>
 
 ## Architecture
 
@@ -41,12 +50,12 @@ A failed check stops the run before the next layer, so the dashboard keeps the l
 
 | | |
 |---|---|
-| Records processed | _ million sales and rental records |
-| Years covered | _ |
-| Full-history run | _ minutes, one job run |
-| Daily run | _ minutes, about _ USD |
+| Records processed | 1,382,848 registered sales and 95,561 Ejari rent contracts |
+| Years covered | Sales 2000 to 2 November 2026; rents October 2026 |
+| Full-history run | About 4 minutes, bronze to gold with every check, on Databricks Free Edition (serverless); a re-run with nothing new takes about 1 minute |
+| Daily run on Azure | _ minutes, about _ USD |
 | Query time after `OPTIMIZE` + liquid clustering | _ % faster ([performance](docs/performance.md)) |
-| Tests | 402: 317 unit, 85 Spark and integration, 98% coverage, all in CI |
+| Tests | 514: 423 unit, 91 Spark and integration, 98% coverage, all in CI |
 | Data quality checks | 25 between the layers, every result recorded |
 | Infrastructure | 5 Terraform stacks, 0 secrets |
 
@@ -108,9 +117,9 @@ Three responses, each where it fits:
 
 | Run | Cost |
 |---|---|
-| Full history | _ |
-| Daily | _ |
-| Month (30 daily runs + storage) | _ |
+| Full history and daily runs on Databricks Free Edition | Free |
+| Daily on Azure | _ (measured after deployment) |
+| Month on Azure (30 daily runs + storage) | _ |
 
 Controls built in:
 - a budget alert set up before anything else;
@@ -156,14 +165,16 @@ Step-by-step, with the backend and variable files each stack needs: [infra](infr
 
 ## What the data says
 
-Three insights from the dashboard, with real numbers, after the full-history run:
+From the dashboard on real data. Prices and rents are for homes (residential apartments and villas), outliers excluded. Method and caveats: [dashboard insights](docs/dashboard.md#insights).
 
-1. _
-2. _
-3. _
+1. **Activity cooled; prices kept rising.** Registered sales rose from 33,102 in 2020 to a record 214,803 in 2025. In 2026 to 2 November they ran 23% below the same period of 2025, yet the median price per sqft of homes was 5.6% higher over the last 12 months than the 12 before (1,738 vs 1,646 AED), and off-plan reached 67% of sales.
+2. **Off-plan costs about a quarter more than ready, not two thirds.** Like for like over the last 12 months: apartments 1,803 vs 1,434 AED per sqft (+26%), villas 1,822 vs 1,480 (+23%). A plain all-years comparison says +64%, because ready sales reach back to cheaper years and include more villas.
+3. **Yields fall as prices rise: from 10.5% to 3.5%.** Citywide gross yield on homes was 5.3% in October 2026 (median rent AED 69,458, median ready price AED 1.24 million): 10.5% in Me'Aisem First (Dubai Production City), 6.7% in JVC, 5.8% in Downtown, 5.25% in Dubai Marina, 3.5% on Palm Jumeirah.
 
 ## Lessons learned
 
+- **Real data finds what synthetic data cannot.** The first run on 1.38 million real sales, from a fresh clone, found more than a dozen problems that 400 passing tests had not: a dependency missing from a clean install, a notebook widget Databricks rejects, a command serverless compute forbids, a profiler that read a building named "1-1-2" as a date, and measures that were correct on paper but wrong on real data. Each fix came with a test.
+- **A median comparison is only as good as what it compares.** Off-plan against ready over all years said 64%; like for like (same months, same property type) it is 26%. Rental yield against an all-years sale price said up to 14.6% in one area; against ready sales in the same month and type, the highest is 10.5%.
 - **Test what production runs, not something close to it.** Local tests fell back to Parquet when Delta was unavailable, which hid a write that used the wrong table format; the first CI run with Delta caught it. CI now refuses to run without Delta.
 - **Lazy plans grow.** Tests that chained silver, dimensions, facts and aggregates without materialising anything ran out of driver memory. The pipeline never had the problem, because it writes each layer to a table, and the tests now checkpoint the same way.
 - **Every tool has its own type system.** Power BI imports source decimals as floating point. The test that keeps the Power BI model in step with gold now compares types as Power BI sees them, not as Spark writes them.
@@ -219,7 +230,7 @@ Three insights from the dashboard, with real numbers, after the full-history run
 | 3 | Silver: typing, dedup, area mapping, MERGE, quarantine | ✅ | ✅ v0.3 |
 | 4 | Gold star schema, SCD Type 2, monthly aggregates, OPTIMIZE | ✅ | ✅ v0.4 |
 | 5 | Data quality framework and integration tests | ✅ | ✅ v0.5 |
-| 6 | Power BI dashboard | ✅ | real-data run, PDF, insights |
+| 6 | Power BI dashboard | ✅ | ✅ v0.6: real data, PDF, insights |
 | 7 | Azure infrastructure with Terraform | ✅ | apply, rebuild proof |
 | 8 | Data Factory orchestration, Asset Bundles | ✅ | deploy, backfill, schedule |
 | 9 | CI/CD deploy, monitoring, runbook, cost | ✅ | first deploy, measured cost |

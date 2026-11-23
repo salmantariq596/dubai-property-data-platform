@@ -1,6 +1,6 @@
 # Performance: gold facts before and after OPTIMIZE
 
-> **Status:** to be filled from the first full run on Databricks. Numbers below are placeholders until then; do not quote them.
+> **Status:** to be filled from the first full run on Azure Databricks, where cluster size and run times are comparable. The real-data run on Free Edition (serverless) took about 4 minutes from bronze to gold for 1.38 million sales and 95,572 rent contracts. The numbers below are placeholders until the Azure run; do not quote them.
 
 ## How to measure
 

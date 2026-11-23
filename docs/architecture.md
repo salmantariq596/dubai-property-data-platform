@@ -77,7 +77,7 @@ Rule catalogue and what to do when a check fails: [data quality](data_quality.md
 
 Four pages in Power BI: Market overview, Area deep-dive, Off-plan vs ready, Rental yield. The semantic model is code (TMDL), tested against gold in CI so a gold change cannot silently break the report. One parameter switches between a Databricks SQL warehouse and exported Parquet files.
 
-Page designs: [dashboard](dashboard.md). Setup: [powerbi/](../powerbi/README.md). Design reasoning: [ADR 0006](adr/0006-power-bi-model.md). *Screenshots follow once real data is loaded; until then the report runs on synthetic sample data (`tools/make_sample_gold.py`).*
+Page designs: [dashboard](dashboard.md). Setup: [powerbi/](../powerbi/README.md). Design reasoning: [ADR 0006](adr/0006-power-bi-model.md). Screenshots from real data: [docs/img/](img/); PDF: [DubaiPropertyMarket.pdf](../powerbi/DubaiPropertyMarket.pdf). The synthetic sample (`tools/make_sample_gold.py`) is for building and testing the report only.
 
 ## Infrastructure: Azure from code, no keys
 

@@ -5,7 +5,7 @@ This walks through the platform from a fresh clone to the Power BI dashboard on 
 | Part | What you get | Time | Cost |
 |---|---|---|---|
 | [1. Local](#part-1-clone-and-test-locally) | Code installed, unit tests passing, sample data | 10 min | Free |
-| [2. Data](#part-2-get-the-data) | 1.38 million real DLD sales on your PC | 10 min | Free |
+| [2. Data](#part-2-get-the-data) | 1.38 million real DLD sales and 95,572 Ejari rent contracts on your PC | 10 min | Free |
 | [3. Databricks](#part-3-run-the-pipeline-on-databricks-free-edition) | Bronze, silver and gold built from real data, every check recorded | 30 min | Free |
 | [4. Power BI](#part-4-the-dashboard-in-power-bi) | The four-page dashboard on real data | 20 min | Free |
 | [5. Azure](#part-5-the-full-platform-on-azure) | Daily scheduled runs, monitoring, deploy on merge | 1–2 h | Azure credit |
@@ -52,6 +52,8 @@ make lint
 
 **The redistributed copy.** On Kaggle, "Dubai Real Estate Sales Transactions 2004-2026" by Dubai Real Estate Data: 1,382,848 registered DLD sales, CC BY 4.0. Download it and unzip. Only `dld_sales_transactions.csv` (about 230 MB) goes into the pipeline; keep the rest of the download (data dictionary, checksums, license) beside it. Silver reads this file's own column names through `SOURCE_ALIASES` in `src/dubai_property/silver/rules.py`, and treats it as sales only because it has no `trans_group_en` column. Every figure published from it must carry the credit in [data sources](data_sources.md).
 
+**Rents.** On Kaggle, "Dubai Property Sales & Ejari Rents, October 2026" by Daemon Data: every Ejari contract registered in October 2026, CC BY 4.0. Only `ejari_contracts_2026_10.csv` goes into the pipeline; the download's transactions file is not used, because the sales export already covers October. DLD publishes no Ejari contract numbers, so silver keys each contract by a hash of its row ([data sources](data_sources.md)).
+
 **Optional: profile it locally** (about 3 minutes):
 
 ```powershell
@@ -66,20 +68,22 @@ make lint
 
 **2. Create the catalog, schemas and volumes.** Open `notebooks/00_setup_unity_catalog`, connect to **Serverless**, **Run all**. It ends with `Landing folders: ['projects', 'rents', 'transactions', 'units']`. If it cannot create the `dubai` catalog, set the `catalog` box to `workspace` and run again, and use `workspace` everywhere below.
 
-**3. Land the file.** **Catalog → dubai → raw → Volumes → landing → transactions → Create directory** `load_date=YYYY-MM-DD` (today's date, spelled exactly like that), open it, **Upload to this volume**, and upload only the CSV.
+**3. Land the files.** **Catalog → dubai → raw → Volumes → landing → transactions → Create directory** `load_date=YYYY-MM-DD` (today's date, spelled exactly like that), open it, **Upload to this volume**, and upload `dld_sales_transactions.csv`. Do the same under **landing → rents** with `ejari_contracts_2026_10.csv`.
 
 **4. Run the pipeline.** Open `notebooks/06_run_pipeline`, connect to **Serverless**, **Run all**. Parameter boxes appear above the notebook after the first cell has run; the defaults (`dubai`, `transactions,rents`) are fine, because a dataset with no files is simply skipped.
 
-**Expected** on the full sales file, in about 4 minutes:
+**Expected** with both files, in about 4 minutes:
 
 ```
 [SUCCESS] transactions load ...: 1 file(s), 1,382,848 rows, 0 rescued
+[SUCCESS] rents load ...: 1 file(s), 95,572 rows, 0 rescued
 [SUCCESS] transactions: 1 load(s), 1,382,848 rows read, 1,382,848 merged, 0 quarantined, 0 duplicates
-[SUCCESS] gold ...: dim_area 244, ..., fact_sales 1,382,848, fact_rents 0, agg_area_monthly 78,785
+[SUCCESS] rents: 1 load(s), 95,572 rows read, 95,561 merged, 0 quarantined, 11 duplicates
+[SUCCESS] gold ...: dim_area 250, dim_property_type 111, dim_project 3,527, fact_sales 1,382,848, fact_rents 95,561, agg_area_monthly 84,389
 [PASS] bronze data quality    [WARN] silver data quality    [PASS] gold data quality
 ```
 
-The two silver warnings are expected: 2,262 sales (0.16%) dated before 2000, outside the date dimension, and 2 rows without a size. A **FAIL** would stop the run before the next layer.
+The two silver warnings are expected: 2,262 sales (0.16%) dated before 2000, outside the date dimension, and 2 rows without a size. The 11 rent duplicates are contracts whose rows are identical in every field, which the publisher notes can happen within the same second; with no contract number they share a key. A **FAIL** would stop the run before the next layer.
 
 **5. Prove that re-runs are safe.** Click **Run all** again without new files: bronze reports `NO_NEW_FILES`, silver `NO_NEW_LOADS`, and gold rebuilds with the same counts, in about a minute.
 
@@ -113,7 +117,16 @@ Open `powerbi/DubaiPropertyMarket.pbip` in Power BI Desktop. The report reads th
 
 **Databricks SQL warehouse: live, if your Power BI has the connector.** Parameters: `GoldSource` = `Databricks`, host and HTTP path from **SQL Warehouses → (warehouse) → Connection details**, `GoldCatalog` = `dubai`. Sign in with a personal access token (**profile → Settings → Developer → Access tokens**); it stays in Power BI's credential store, never in the repo. If **Get data** finds no "Databricks" source, or the load fails with *"We cannot convert the value null to type Function"*, this Power BI has no Databricks connector: use the Parquet export.
 
-**Expected:** Market overview shows 1.38M sales, a median of about 1,310 AED per sqft (homes only), and a ranking of the fastest-rising areas. The Rental yield page stays empty until rents are loaded. Measure definitions and why they are built that way: [dashboard](dashboard.md).
+**Expected**, as in the [screenshots](img/) and the [PDF](../powerbi/DubaiPropertyMarket.pdf):
+
+| Page | Headline figures |
+|---|---|
+| Market overview | 1.38M sales, AED 3.81T, median 1.31K AED per sqft (homes), +5.61% over the last 12 months |
+| Area deep-dive | Medians by area for apartments (Unit) and villas, scatter of activity against price, top projects |
+| Off-plan vs ready | 46.8% off-plan overall, premium 25.6% like for like |
+| Rental yield | Gross yield 5.30%, median rent 69.46K, median ready price 1.24M (October 2026) |
+
+Measure definitions, and why they are built that way: [dashboard](dashboard.md). When opening the report after a `git pull`, choose **Don't save** on closing unless you changed something meant for the repo: Power BI otherwise saves your local parameters and the page you had open.
 
 ## Part 5: the full platform on Azure
 
